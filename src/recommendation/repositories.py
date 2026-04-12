@@ -16,3 +16,10 @@ class FangCollaborativeParameterRepository:
     
     def get_skill_bias(self, skill_id: int) -> float:
         raise NotImplementedError
+
+class FangContentBasedRepository:
+    def get_similar_skills(self, user_id: int, skill_id: int) -> list[tuple[int, float, float]]:
+        """
+        Return triplet of skill ID, level, and similarity.
+        """
+        raise NotImplementedError

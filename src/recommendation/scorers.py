@@ -37,3 +37,14 @@ class FangContentBasedScorer:
             score_denumerator += sim
 
         return score_numerator / score_denumerator
+
+class FangScorer:
+    def __init__(self, collaborative_scorer: FangCollaborativeScorer,
+                 content_based_scorer: FangContentBasedScorer):
+        self.collaborative_scorer = collaborative_scorer
+        self.content_based_scorer = content_based_scorer
+    
+    def get_score(self, user_id: int, skill_id: int) -> float:
+        collaborative_score = self.collaborative_scorer.get_score(user_id, skill_id)
+        content_based_score = self.content_based_scorer.get_score(user_id, skill_id)
+        return collaborative_score + content_based_score

@@ -2,7 +2,7 @@ import numpy as np
 import numpy.typing as npt
 
 from src.recommendation.repositories import FangCollaborativeParameterRepository, FangContentBasedRepository
-from src.recommendation.scorers import FangCollaborativeScorer, FangContentBasedScorer
+from src.recommendation.scorers import FangCollaborativeScorer, FangContentBasedScorer, FangScorer
 
 def test_fang_collaborative_scorer():
     chosen_user_id = np.random.randint(999_999_999)
@@ -134,5 +134,50 @@ def test_fang_content_based_scorer_empty_skills():
     repo = MockFangContentBasedRepository()
     scorer = FangContentBasedScorer(repo)
 
+    actual_score = scorer.get_score(chosen_user_id, chosen_skill_id)
+    assert abs(actual_score - expected_score) <= max_error
+
+def test_fang_scorer():
+    chosen_user_id = np.random.randint(999_999_999)
+    chosen_skill_id = np.random.randint(999_999_999)
+    collaborative_score = np.random.exponential()
+    content_based_score = np.random.exponential()
+
+    class MockFangCollaborativeScorer(FangCollaborativeScorer):
+        def __init__(self):
+            self.fetch_limit = 1
+
+        def _fetch(self):
+            assert self.fetch_limit > 0
+            self.fetch_limit -= 1
+
+        def get_score(self, user_id: int, skill_id: int) -> float:
+            assert user_id == chosen_user_id
+            assert skill_id == chosen_skill_id
+            self._fetch()
+            return collaborative_score
+        
+    class MockFangContentBasedScorer(FangContentBasedScorer):
+        def __init__(self):
+            self.fetch_limit = 1
+
+        def _fetch(self):
+            assert self.fetch_limit > 0
+            self.fetch_limit -= 1
+
+        def get_score(self, user_id: int, skill_id: int) -> float:
+            assert user_id == chosen_user_id
+            assert skill_id == chosen_skill_id
+            self._fetch()
+            return content_based_score
+        
+    expected_score = collaborative_score + content_based_score
+    max_error = 1e-8
+    
+    collab_scorer = MockFangCollaborativeScorer()
+    content_based_scorer = MockFangContentBasedScorer()
+    scorer = FangScorer(collaborative_scorer=collab_scorer,
+                        content_based_scorer=content_based_scorer)
+    
     actual_score = scorer.get_score(chosen_user_id, chosen_skill_id)
     assert abs(actual_score - expected_score) <= max_error

@@ -23,3 +23,7 @@ class FangContentBasedRepository:
         Return triplet of skill ID, level, and similarity.
         """
         raise NotImplementedError
+
+class VacancyRepository:
+    def get_required_skills(self, id: int) -> list[int]:
+        raise NotImplementedError

@@ -1,8 +1,8 @@
 import numpy as np
 import numpy.typing as npt
 
-from src.recommendation.repositories import FangCollaborativeParameterRepository, FangContentBasedRepository
-from src.recommendation.scorers import FangCollaborativeScorer, FangContentBasedScorer, FangScorer
+from src.recommendation.repositories import FangCollaborativeParameterRepository, FangContentBasedRepository, VacancyRepository
+from src.recommendation.scorers import FangCollaborativeScorer, FangContentBasedScorer, FangScorer, VacancyScorer
 
 def test_fang_collaborative_scorer():
     chosen_user_id = np.random.randint(999_999_999)
@@ -180,4 +180,54 @@ def test_fang_scorer():
                         content_based_scorer=content_based_scorer)
     
     actual_score = scorer.get_score(chosen_user_id, chosen_skill_id)
+    assert abs(actual_score - expected_score) <= max_error
+
+def test_fang_vacancy_scorer():
+    chosen_user_id = np.random.randint(999_999_999)
+    chosen_vacancy_id = np.random.randint(999_999_999)
+
+    skill_scores: dict[int, float] = {}
+    for _ in range(1 + int(np.random.exponential(3))):
+        stop = False
+        new_skill_id = -1
+        while not stop:
+            new_skill_id = np.random.randint(999_999_999)
+            stop = new_skill_id not in skill_scores
+        
+        skill_scores[new_skill_id] = np.random.exponential()
+
+    expected_score = sum(skill_scores.values()) / len(skill_scores)
+    max_error = 1e-8
+
+    class MockFangScorer(FangScorer):
+        def __init__(self):
+            self.fetch_limit = len(skill_scores)
+
+        def _fetch(self):
+            assert self.fetch_limit > 0
+            self.fetch_limit -= 1
+
+        def get_score(self, user_id: int, skill_id: int) -> float:
+            assert user_id == chosen_user_id
+            self._fetch()
+            return skill_scores[skill_id]
+    
+    class MockVacancyRepository(VacancyRepository):
+        def __init__(self):
+            self.fetch_limit = 1
+
+        def _fetch(self):
+            assert self.fetch_limit > 0
+            self.fetch_limit -= 1
+
+        def get_required_skills(self, id: int) -> list[int]:
+            assert id == chosen_vacancy_id
+            self._fetch()
+            return list(skill_scores.keys())
+    
+    child_scorer = MockFangScorer()
+    repo = MockVacancyRepository()
+    scorer = VacancyScorer(child_scorer, repo)
+
+    actual_score = scorer.get_score(chosen_user_id, chosen_vacancy_id)
     assert abs(actual_score - expected_score) <= max_error

@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.recommendation.repositories import FangCollaborativeParameterRepository, FangContentBasedRepository
+from src.recommendation.repositories import FangCollaborativeParameterRepository, FangContentBasedRepository, VacancyRepository
 
 class FangCollaborativeScorer:
     def __init__(self, repository: FangCollaborativeParameterRepository):
@@ -48,3 +48,19 @@ class FangScorer:
         collaborative_score = self.collaborative_scorer.get_score(user_id, skill_id)
         content_based_score = self.content_based_scorer.get_score(user_id, skill_id)
         return collaborative_score + content_based_score
+
+class VacancyScorer:
+    def __init__(self, child_scorer: FangScorer, repository: VacancyRepository):
+        self.child_scorer = child_scorer
+        self.repository = repository
+    
+    def get_score(self, user_id: int, vacancy_id: int) -> float:
+        total_score = 0.0
+        skill_count = 0
+
+        for skill_id in self.repository.get_required_skills(vacancy_id):
+            score = self.child_scorer.get_score(user_id, skill_id)
+            total_score += score
+            skill_count += 1
+        
+        return total_score / skill_count

@@ -27,3 +27,28 @@ class FangContentBasedRepository:
 class VacancyRepository:
     def get_required_skills(self, id: int) -> list[int]:
         raise NotImplementedError
+    
+    def get_info(self, id: int) -> tuple[int, str, str]:
+        """
+        Returns a tuple <company_id, description, source_url>.
+        """
+        raise NotImplementedError
+
+class UserRepository:
+    def get_connections(self, id: int) -> list[tuple[int, float]]:
+        """
+        Return a tuple <user_id, score> in one hop. Scores are cached in database.
+        """
+        raise NotImplementedError
+    
+    def get_suggested_connections(self, id: int) -> list[tuple[int, float]]:
+        """
+        Return a tuple <user_id, score> in two hops. Scores are cached in database.
+        """
+        raise NotImplementedError
+    
+    def get_vacancies_from_current_companies(self, id: int) -> list[tuple[int, float]]:
+        """
+        Return a tuple <vacancy_id, score> that connects to user's companies. Scores are cached in database.
+        """
+        raise NotImplementedError

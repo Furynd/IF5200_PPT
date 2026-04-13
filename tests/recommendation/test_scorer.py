@@ -2,7 +2,7 @@ import numpy as np
 import numpy.typing as npt
 
 from src.recommendation.repositories import FangCollaborativeParameterRepository, FangContentBasedRepository, VacancyRepository
-from src.recommendation.scorers import FangCollaborativeScorer, FangContentBasedScorer, FangScorer, VacancyScorer
+from src.recommendation.scorers import FangCollaborativeScorer, FangContentBasedScorer, FangScorer, FangVacancyScorer
 
 def test_fang_collaborative_scorer():
     chosen_user_id = np.random.randint(999_999_999)
@@ -227,7 +227,7 @@ def test_fang_vacancy_scorer():
     
     child_scorer = MockFangScorer()
     repo = MockVacancyRepository()
-    scorer = VacancyScorer(child_scorer, repo)
+    scorer = FangVacancyScorer(child_scorer, repo)
 
     actual_score = scorer.get_score(chosen_user_id, chosen_vacancy_id)
     assert abs(actual_score - expected_score) <= max_error

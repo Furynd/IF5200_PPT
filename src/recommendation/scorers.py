@@ -49,7 +49,7 @@ class FangScorer:
         content_based_score = self.content_based_scorer.get_score(user_id, skill_id)
         return collaborative_score + content_based_score
 
-class VacancyScorer:
+class FangVacancyScorer:
     def __init__(self, child_scorer: FangScorer, repository: VacancyRepository):
         self.child_scorer = child_scorer
         self.repository = repository

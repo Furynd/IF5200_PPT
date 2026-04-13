@@ -16,6 +16,21 @@ class FangCollaborativeParameterRepository:
     
     def get_skill_bias(self, skill_id: int) -> float:
         raise NotImplementedError
+    
+    def set_global_bias(self, value: float) -> None:
+        raise NotImplementedError
+    
+    def set_user_latent_vector(self, user_id: int, value: npt.NDArray[np.float64]) -> None:
+        raise NotImplementedError
+    
+    def set_user_bias(self, user_id: int, value: float) -> None:
+        raise NotImplementedError
+    
+    def set_skill_latent_vector(self, skill_id: int, value: npt.NDArray[np.float64]) -> None:
+        raise NotImplementedError
+    
+    def set_skill_bias(self, skill_id: int, value: float) -> None:
+        raise NotImplementedError
 
 class FangContentBasedRepository:
     def get_similar_skills(self, user_id: int, skill_id: int) -> list[tuple[int, float, float]]:
@@ -37,18 +52,31 @@ class VacancyRepository:
 class UserRepository:
     def get_connections(self, id: int) -> list[tuple[int, float]]:
         """
-        Return a tuple <user_id, score> in one hop. Scores are cached in database.
+        Return a list of tuples <user_id, score> in one hop. Scores are cached in database.
         """
         raise NotImplementedError
     
     def get_suggested_connections(self, id: int) -> list[tuple[int, float]]:
         """
-        Return a tuple <user_id, score> in two hops. Scores are cached in database.
+        Return a list of tuples <user_id, score> in two hops. Scores are cached in database.
         """
         raise NotImplementedError
     
     def get_vacancies_from_current_companies(self, id: int) -> list[tuple[int, float]]:
         """
-        Return a tuple <vacancy_id, score> that connects to user's companies. Scores are cached in database.
+        Return a list of tuples <vacancy_id, score> that connects to user's companies. Scores are cached in database.
         """
+        raise NotImplementedError
+    
+    def get_all_skills(self, id: int) -> list[tuple[int, float]]:
+        """
+        Return a list of tuples <skill_id, level>.
+        """
+        raise NotImplementedError
+
+class ConfigRepository:
+    def get_fang_learning_rate(self) -> float:
+        raise NotImplementedError
+    
+    def get_fang_regularization_factor(self) -> float:
         raise NotImplementedError

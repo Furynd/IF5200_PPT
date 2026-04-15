@@ -1,0 +1,179 @@
+import numpy as np
+
+from src.recommendation.repositories import UserRepository, VacancyRepository
+from src.recommendation.service import RecommendationService
+
+def test_get_connections_unsorted():
+    chosen_user_id = np.random.randint(999_999_999)
+    connections: dict[int, float] = {}
+
+    for _ in range(5 + int(np.random.exponential(5))):
+        stop = False
+        new_user_id = -1
+        while not stop:
+            new_user_id = np.random.randint(999_999_999)
+            stop = (
+                new_user_id != chosen_user_id
+                and new_user_id not in connections
+            )
+
+        connections[new_user_id] = np.random.random()
+
+    expected_result = [
+        {
+            "user_id": user_id,
+            "score": score
+        } for user_id, score in connections.items()
+    ]
+    expected_result.sort(key=lambda x: x["score"], reverse=True)
+
+    class MockUserRepository(UserRepository):
+        def __init__(self):
+            self.fetch_limit = 1
+
+        def _fetch(self):
+            assert self.fetch_limit > 0
+            self.fetch_limit -= 1
+
+        def get_connections(self, id: int) -> list[tuple[int, float]]:
+            assert id == chosen_user_id
+            self._fetch()
+            return [(k, v) for k, v in connections.items()]
+        
+    class MockVacancyRepository(VacancyRepository):
+        def __init__(self):
+            pass
+        
+    user_repo = MockUserRepository()
+    vacancy_repo = MockVacancyRepository()
+
+    service = RecommendationService(user_repo, vacancy_repo)
+    actual_result = service.get_connections(chosen_user_id)
+
+    assert len(actual_result) == len(expected_result)
+    for actual_el, expected_el in zip(actual_result, expected_result):
+        assert len(actual_el) == len(expected_el)
+        for key, expected_value in expected_el.items():
+            assert actual_el[key] == expected_value
+
+def test_get_suggested_connections_unsorted():
+    chosen_user_id = np.random.randint(999_999_999)
+    suggested_connections: dict[int, float] = {}
+
+    for _ in range(5 + int(np.random.exponential(5))):
+        stop = False
+        new_user_id = -1
+        while not stop:
+            new_user_id = np.random.randint(999_999_999)
+            stop = (
+                new_user_id != chosen_user_id
+                and new_user_id not in suggested_connections
+            )
+
+        suggested_connections[new_user_id] = np.random.random()
+
+    expected_result = [
+        {
+            "user_id": user_id,
+            "score": score
+        } for user_id, score in suggested_connections.items()
+    ]
+    expected_result.sort(key=lambda x: x["score"], reverse=True)
+
+    class MockUserRepository(UserRepository):
+        def __init__(self):
+            self.fetch_limit = 1
+
+        def _fetch(self):
+            assert self.fetch_limit > 0
+            self.fetch_limit -= 1
+
+        def get_suggested_connections(self, id: int) -> list[tuple[int, float]]:
+            assert id == chosen_user_id
+            self._fetch()
+            return [(k, v) for k, v in suggested_connections.items()]
+        
+    class MockVacancyRepository(VacancyRepository):
+        def __init__(self):
+            pass
+        
+    user_repo = MockUserRepository()
+    vacancy_repo = MockVacancyRepository()
+
+    service = RecommendationService(user_repo, vacancy_repo)
+    actual_result = service.get_suggested_connections(chosen_user_id)
+
+    assert len(actual_result) == len(expected_result)
+    for actual_el, expected_el in zip(actual_result, expected_result):
+        assert len(actual_el) == len(expected_el)
+        for key, expected_value in expected_el.items():
+            assert actual_el[key] == expected_value
+
+def test_get_vacancies():
+    chosen_user_id = np.random.randint(999_999_999)
+    vacancy_infos: dict[int, tuple[int, str, str, float]] = {}
+
+    for _ in range(5 + int(np.random.exponential(5))):
+        stop = False
+        new_vacancy_id = -1
+        while not stop:
+            new_vacancy_id = np.random.randint(999_999_999)
+            stop = (
+                new_vacancy_id != chosen_user_id
+                and new_vacancy_id not in vacancy_infos
+            )
+
+        vacancy_infos[new_vacancy_id] = (
+            np.random.randint(999_999_999),
+            f"description{np.random.randint(999_999_999)}",
+            f"url{np.random.randint(999_999_999)}",
+            np.random.random(),
+        )
+
+    expected_result = [
+        {
+            "company_id": company_id,
+            "description": description,
+            "source_url": url,
+            "score": score,
+        } for company_id, description, url, score in vacancy_infos.values()
+    ]
+    expected_result.sort(key=lambda x: x["score"], reverse=True)
+
+    class MockUserRepository(UserRepository):
+        def __init__(self):
+            self.fetch_limit = 1
+
+        def _fetch(self):
+            assert self.fetch_limit > 0
+            self.fetch_limit -= 1
+
+        def get_vacancies_from_current_companies(self, id: int) -> list[tuple[int, float]]:
+            assert id == chosen_user_id
+            self._fetch()
+            return [(vacancy_id, score) for vacancy_id, (_, _, _, score) in vacancy_infos.items()] 
+        
+    class MockVacancyRepository(VacancyRepository):
+        def __init__(self):
+            self.fetch_limit = len(vacancy_infos)
+
+        def _fetch(self):
+            assert self.fetch_limit > 0
+            self.fetch_limit -= 1
+
+        def get_info(self, id: int) -> tuple[int, str, str]:
+            self._fetch()
+            company_id, description, source_url, _ = vacancy_infos[id]
+            return (company_id, description, source_url)
+    
+    user_repo = MockUserRepository()
+    vacancy_repo = MockVacancyRepository()
+
+    service = RecommendationService(user_repo, vacancy_repo)
+    actual_result = service.get_vacancies(chosen_user_id)
+
+    assert len(actual_result) == len(expected_result)
+    for actual_el, expected_el in zip(actual_result, expected_result):
+        assert len(actual_el) == len(expected_el)
+        for key, expected_value in expected_el.items():
+            assert actual_el[key] == expected_value

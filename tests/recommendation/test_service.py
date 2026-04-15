@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.recommendation.repositories import UserRepository, VacancyRepository
+from src.repositories import UserRepository, VacancyRepository
 from src.recommendation.service import RecommendationService
 
 def test_get_connections_unsorted():

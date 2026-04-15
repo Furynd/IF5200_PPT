@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.recommendation.repositories import FangCollaborativeParameterRepository, FangContentBasedRepository, VacancyRepository
+from src.repositories import FangCollaborativeParameterRepository, FangContentBasedRepository, VacancyRepository
 
 class FangCollaborativeScorer:
     def __init__(self, repository: FangCollaborativeParameterRepository):

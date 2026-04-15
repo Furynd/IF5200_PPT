@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 
-from src.recommendation.repositories import FangCollaborativeParameterRepository, FangContentBasedRepository, VacancyRepository
+from src.repositories import FangCollaborativeParameterRepository, FangContentBasedRepository, VacancyRepository
 from src.recommendation.scorers import FangCollaborativeScorer, FangContentBasedScorer, FangScorer, FangVacancyScorer
 
 def test_fang_collaborative_scorer():

@@ -3,6 +3,7 @@ backend/.env
 
 # Python bytecode and caches
 __pycache__/
+**/__pycache__
 *.py[cod]
 *.pyo
 *.pyd
@@ -30,3 +31,4 @@ dist/
 # IDE/editor
 .vscode/
 .idea/
+

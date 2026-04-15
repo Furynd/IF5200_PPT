@@ -1,19 +1,21 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { Home, Search, Send, User, Settings, LogOut } from 'lucide-react'
+import { useAuth } from '../lib/auth'
 
 const navItems = [
   { to: '/', icon: Home, label: 'Beranda' },
-  { to: '/search', icon: Search, label: 'Cari Perusahaan' },
-  { to: '/referrals', icon: Send, label: 'Referral Saya' },
+  { to: '/search', icon: Search, label: 'Cari' },
+  { to: '/referrals', icon: Send, label: 'Referral' },
   { to: '/profile', icon: User, label: 'Profil' },
   { to: '/settings', icon: Settings, label: 'Pengaturan' },
 ]
 
 export default function Layout() {
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
+    logout()
     navigate('/login')
   }
 
@@ -23,6 +25,7 @@ export default function Layout() {
       <header className="bg-white border-b border-surface-200 sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <NavLink to="/" className="text-xl font-bold text-primary-600">Referly</NavLink>
+
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map(({ to, icon: Icon, label }) => (
               <NavLink
@@ -38,15 +41,22 @@ export default function Layout() {
                 <span>{label}</span>
               </NavLink>
             ))}
-            <button onClick={handleLogout} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-red-50 hover:text-red-600 ml-2">
-              <LogOut size={18} />
-            </button>
+
+            {user && (
+              <button
+                onClick={handleLogout}
+                title={`Keluar (${user.email})`}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-red-50 hover:text-red-600 ml-2"
+              >
+                <LogOut size={18} />
+              </button>
+            )}
           </nav>
         </div>
       </header>
 
       {/* Page content */}
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6">
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6 pb-20 md:pb-6">
         <Outlet />
       </main>
 

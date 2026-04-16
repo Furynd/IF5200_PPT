@@ -20,18 +20,18 @@ export default function App() {
         <Route path="/register" element={<RegisterPage />} />
 
         {/* Protected routes (require login) */}
-        <Route element={
+        {/* <Route element={
           <ProtectedRoute>
             <Layout />
           </ProtectedRoute>
-        }>
+        }> */}
           <Route path="/" element={<HomePage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/company/:id" element={<CompanyPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/referrals" element={<ReferralsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
-        </Route>
+        {/* </Route> */}
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

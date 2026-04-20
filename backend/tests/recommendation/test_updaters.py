@@ -1,10 +1,10 @@
 import numpy as np
 
 from backend.app.recommendation.optimizers import FangCollaborativeOptimizer
-from backend.app.recommendation.updaters import FangVacancyScorerUpdater
+from backend.app.recommendation.updaters import FangCollaborativeOptimizerUpdater
 from backend.app.repositories import ConfigRepository, UserRepository
 
-def test_vacancy_scorer_updater_empty_users():
+def test_collaborative_optimizer_updater_empty_users():
     class MockUserRepository(UserRepository):
         def __init__(self):
             self.called_count = 0
@@ -27,7 +27,7 @@ def test_vacancy_scorer_updater_empty_users():
     user_repo = MockUserRepository()
     config_repo = MockConfigRepository()
     optim = MockFangCollaborativeOptimizer()
-    updater = FangVacancyScorerUpdater(
+    updater = FangCollaborativeOptimizerUpdater(
         user_repository=user_repo,
         config_repository=config_repo,
         collaborative_optimizer=optim
@@ -35,7 +35,7 @@ def test_vacancy_scorer_updater_empty_users():
     updater.update()
     assert user_repo.called_count == 1
 
-def test_vacancy_scorer_updater_one_user_error_same_as_max():
+def test_collaborative_optimizer_updater_one_user_error_same_as_max():
     np.random.seed(120)
     CHOSEN_USER_ID = np.random.randint(999_999_999)
     CHOSEN_MAX_ERROR = np.random.exponential()
@@ -77,7 +77,7 @@ def test_vacancy_scorer_updater_one_user_error_same_as_max():
     user_repo = MockUserRepository()
     config_repo = MockConfigRepository()
     optim = MockFangCollaborativeOptimizer()
-    updater = FangVacancyScorerUpdater(
+    updater = FangCollaborativeOptimizerUpdater(
         user_repository=user_repo,
         config_repository=config_repo,
         collaborative_optimizer=optim
@@ -89,7 +89,7 @@ def test_vacancy_scorer_updater_one_user_error_same_as_max():
     assert config_repo.called_count == 1
     assert optim.get_called_count == 1
 
-def test_vacancy_scorer_updater_one_user_stopped_by_max_steps():
+def test_collaborative_optimizer_updater_one_user_stopped_by_max_steps():
     np.random.seed(120)
     CHOSEN_USER_ID = np.random.randint(999_999_999)
     CHOSEN_MAX_ERROR = np.random.exponential()
@@ -133,7 +133,7 @@ def test_vacancy_scorer_updater_one_user_stopped_by_max_steps():
     user_repo = MockUserRepository()
     config_repo = MockConfigRepository()
     optim = MockFangCollaborativeOptimizer()
-    updater = FangVacancyScorerUpdater(
+    updater = FangCollaborativeOptimizerUpdater(
         user_repository=user_repo,
         config_repository=config_repo,
         collaborative_optimizer=optim
@@ -146,7 +146,7 @@ def test_vacancy_scorer_updater_one_user_stopped_by_max_steps():
     assert config_repo.steps_called_count == 1
     assert optim.get_called_count == 1
 
-def test_vacancy_scorer_updater_two_users_error_same_as_max():
+def test_collaborative_optimizer_updater_two_users_error_same_as_max():
     np.random.seed(120)
     CHOSEN_USER_ID_1 = np.random.randint(999_999_999)
     CHOSEN_USER_ID_2 = np.random.randint(999_999_999)
@@ -197,7 +197,7 @@ def test_vacancy_scorer_updater_two_users_error_same_as_max():
     user_repo = MockUserRepository()
     config_repo = MockConfigRepository()
     optim = MockFangCollaborativeOptimizer()
-    updater = FangVacancyScorerUpdater(
+    updater = FangCollaborativeOptimizerUpdater(
         user_repository=user_repo,
         config_repository=config_repo,
         collaborative_optimizer=optim
@@ -210,7 +210,7 @@ def test_vacancy_scorer_updater_two_users_error_same_as_max():
     assert config_repo.steps_called_count == 1
     assert optim.get_called_count == 2
 
-def test_vacancy_scorer_updater_one_user_stopped_by_max_error_after_two_steps():
+def test_collaborative_optimizer_updater_one_user_stopped_by_max_error_after_two_steps():
     np.random.seed(120)
     CHOSEN_USER_ID = np.random.randint(999_999_999)
     CHOSEN_MAX_ERROR = np.random.exponential()
@@ -257,7 +257,7 @@ def test_vacancy_scorer_updater_one_user_stopped_by_max_error_after_two_steps():
     user_repo = MockUserRepository()
     config_repo = MockConfigRepository()
     optim = MockFangCollaborativeOptimizer()
-    updater = FangVacancyScorerUpdater(
+    updater = FangCollaborativeOptimizerUpdater(
         user_repository=user_repo,
         config_repository=config_repo,
         collaborative_optimizer=optim
@@ -270,7 +270,7 @@ def test_vacancy_scorer_updater_one_user_stopped_by_max_error_after_two_steps():
     assert config_repo.steps_called_count == 1
     assert optim.get_called_count == 2
 
-def test_vacancy_scorer_updater_two_users_error_same_as_max_after_one_step():
+def test_collaborative_optimizer_updater_two_users_error_same_as_max_after_one_step():
     np.random.seed(120)
     CHOSEN_USER_ID_1 = np.random.randint(999_999_999)
     CHOSEN_USER_ID_2 = np.random.randint(999_999_999)
@@ -324,7 +324,7 @@ def test_vacancy_scorer_updater_two_users_error_same_as_max_after_one_step():
     user_repo = MockUserRepository()
     config_repo = MockConfigRepository()
     optim = MockFangCollaborativeOptimizer()
-    updater = FangVacancyScorerUpdater(
+    updater = FangCollaborativeOptimizerUpdater(
         user_repository=user_repo,
         config_repository=config_repo,
         collaborative_optimizer=optim
@@ -337,7 +337,7 @@ def test_vacancy_scorer_updater_two_users_error_same_as_max_after_one_step():
     assert config_repo.steps_called_count == 1
     assert optim.get_called_count == 3
 
-def test_vacancy_scorer_updater_two_users_error_same_as_max_when_second_not_converged_at_first():
+def test_collaborative_optimizer_updater_two_users_error_same_as_max_when_second_not_converged_at_first():
     np.random.seed(120)
     CHOSEN_USER_ID_1 = np.random.randint(999_999_999)
     CHOSEN_USER_ID_2 = np.random.randint(999_999_999)
@@ -391,7 +391,7 @@ def test_vacancy_scorer_updater_two_users_error_same_as_max_when_second_not_conv
     user_repo = MockUserRepository()
     config_repo = MockConfigRepository()
     optim = MockFangCollaborativeOptimizer()
-    updater = FangVacancyScorerUpdater(
+    updater = FangCollaborativeOptimizerUpdater(
         user_repository=user_repo,
         config_repository=config_repo,
         collaborative_optimizer=optim

@@ -1,7 +1,7 @@
 from backend.app.recommendation.optimizers import FangCollaborativeOptimizer
 from backend.app.repositories import ConfigRepository, UserRepository
 
-class FangVacancyScorerUpdater:
+class FangCollaborativeOptimizerUpdater:
     def __init__(
             self,
             user_repository: UserRepository,

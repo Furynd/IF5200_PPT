@@ -10,17 +10,19 @@ Usage in FastAPI:
 """
 
 import os
+from pathlib import Path
 from neo4j import AsyncGraphDatabase, AsyncDriver
 from dotenv import load_dotenv
 
-load_dotenv()
+# Explicit path so this works regardless of where uvicorn is launched from
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 NEO4J_URI = os.getenv("NEO4J_URI")
-NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+NEO4J_USER = os.getenv("NEO4J_USERNAME")  # Aura uses NEO4J_USERNAME, not NEO4J_USER
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 
-if not NEO4J_URI or not NEO4J_PASSWORD:
-    raise RuntimeError("NEO4J_URI and NEO4J_PASSWORD must be set in environment")
+if not NEO4J_URI or not NEO4J_USER or not NEO4J_PASSWORD:
+    raise RuntimeError("NEO4J_URI, NEO4J_USERNAME, and NEO4J_PASSWORD must be set in environment")
 
 _driver: AsyncDriver | None = None
 

@@ -1,8 +1,8 @@
 import numpy as np
 import numpy.typing as npt
 
-from src.recommendation.optimizers import FangCollaborativeOptimizer
-from src.repositories import ConfigRepository, FangCollaborativeParameterRepository, UserRepository
+from backend.recommendation.optimizers import FangCollaborativeOptimizer
+from backend.repositories import ConfigRepository, FangCollaborativeParameterRepository, UserRepository
 
 def test_fang_collaborative_optimizer():
     DIMENSION = 10

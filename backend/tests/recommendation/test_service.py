@@ -1,7 +1,7 @@
 import numpy as np
 
-from src.repositories import UserRepository, VacancyRepository
-from src.recommendation.service import RecommendationService
+from backend.repositories import UserRepository, VacancyRepository
+from backend.recommendation.service import RecommendationService
 
 def test_get_connections_unsorted():
     chosen_user_id = np.random.randint(999_999_999)

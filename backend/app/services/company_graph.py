@@ -38,7 +38,7 @@ async def search_companies(
     cypher = """
     MATCH (c:Company)
     WITH c, toLower(c.name) AS lname
-    WHERE lname CONTAINS $query
+    WHERE lname CONTAINS $q
     OPTIONAL MATCH (c)<-[:WORKS_AT]-(u:User)
     WITH c, lname, count(u) AS connection_count
     RETURN
@@ -47,8 +47,8 @@ async def search_companies(
         c.industry AS industry,
         connection_count,
         CASE
-            WHEN lname = $query THEN 0
-            WHEN lname STARTS WITH $query THEN 1
+            WHEN lname = $q THEN 0
+            WHEN lname STARTS WITH $q THEN 1
             ELSE 2
         END AS rank
     ORDER BY rank ASC, connection_count DESC, c.name ASC
@@ -56,7 +56,7 @@ async def search_companies(
     """
 
     async with driver.session() as session:
-        result = await session.run(cypher, query=normalized, limit=limit)
+        result = await session.run(cypher, q=normalized, limit=limit)
         records = await result.data()
         return [
             {

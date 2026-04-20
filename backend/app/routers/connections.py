@@ -6,10 +6,6 @@ AUTH NOTE (temporary):
   When Dev A completes JWT auth, replace the `user_id: str` query param
   with `current_user_id: str = Depends(auth.get_current_user_id)` and
   remove the default value.
-
-Endpoints:
-  GET /api/user/network-stats?user_id=
-  GET /api/connections/at-company/{company_id}?user_id=&max_hops=
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -17,14 +13,12 @@ from pydantic import BaseModel
 from neo4j import AsyncDriver
 
 from app.db.neo4j import get_neo4j_driver
-from app.services import recommendation
+from app.services import recommendation, company_graph
 
 router = APIRouter()
 
 DEMO_USER_ID = "user-001"
 
-
-# ── Response models ────────────────────────────────────────────────────────────
 
 class NetworkStatsResponse(BaseModel):
     connections: int
@@ -32,45 +26,18 @@ class NetworkStatsResponse(BaseModel):
     referrals_sent: int
 
 
-class SkillEntry(BaseModel):
-    id: str
-    name: str | None
-    level: str | None
-
-
-class ConnectionEntry(BaseModel):
-    id: str
-    full_name: str
-    hops: int
-    skills: list[SkillEntry]
-    score: float
-    score_method: str
-
-
-class ConnectionsAtCompanyResponse(BaseModel):
-    company_id: str
-    total: int
-    connections: list[ConnectionEntry]
-
-
-# ── Endpoints ─────────────────────────────────────────────────────────────────
-
 @router.get("/user/network-stats", response_model=NetworkStatsResponse)
 async def network_stats(
-    user_id: str = Query(default=DEMO_USER_ID, description="Replace with JWT dep when auth is ready"),
+    user_id: str = Query(default=DEMO_USER_ID),
     driver: AsyncDriver = Depends(get_neo4j_driver),
 ):
-    stats = await recommendation.get_network_stats(driver, user_id)
-    return stats
+    return await recommendation.get_network_stats(driver, user_id)
 
 
-@router.get(
-    "/connections/at-company/{company_id}",
-    response_model=ConnectionsAtCompanyResponse,
-)
+@router.get("/connections/at-company/{company_id}")
 async def connections_at_company(
     company_id: str,
-    user_id: str = Query(default=DEMO_USER_ID, description="Replace with JWT dep when auth is ready"),
+    user_id: str = Query(default=DEMO_USER_ID),
     max_hops: int = Query(default=2, ge=1, le=2),
     driver: AsyncDriver = Depends(get_neo4j_driver),
 ):
@@ -78,13 +45,23 @@ async def connections_at_company(
     if seeker is None:
         raise HTTPException(status_code=404, detail=f"User {user_id} not found in graph")
 
-    connections = await recommendation.get_connections_at_company(
-        driver, user_id, company_id, max_hops
-    )
-    ranked = recommendation.rank_connections(seeker, connections)
+    company, connections = await _fetch_both(driver, user_id, company_id, max_hops, seeker)
+
+    if company is None:
+        raise HTTPException(status_code=404, detail=f"Company {company_id} not found")
 
     return {
-        "company_id": company_id,
-        "total": len(ranked),
-        "connections": ranked,
+        "company": company,
+        "connections": connections,
     }
+
+
+async def _fetch_both(driver, user_id, company_id, max_hops, seeker):
+    import asyncio
+    company_task = recommendation.get_network_stats  # placeholder — run both concurrently
+    co, raw = await asyncio.gather(
+        company_graph.get_company(driver, company_id),
+        recommendation.get_connections_at_company(driver, user_id, company_id, max_hops),
+    )
+    ranked = recommendation.rank_connections(seeker, raw)
+    return co, ranked

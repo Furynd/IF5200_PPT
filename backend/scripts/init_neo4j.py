@@ -13,12 +13,18 @@ import os
 import json
 from neo4j import GraphDatabase
 from dotenv import load_dotenv
+from pathlib import Path
+
+
+env_path = Path(__file__).resolve().parents[1] / ".env"
+load_dotenv(env_path)
 
 load_dotenv()
 
-NEO4J_URI = os.getenv("NEO4J_URI", "neo4j+s://xxxxx.databases.neo4j.io")
-NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "your-password-here")
+NEO4J_URI = os.getenv("NEO4J_URI")
+NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
+
 
 
 def init_schema(tx):
@@ -239,7 +245,7 @@ SKILLS = [
 
 
 def main():
-    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
 
     with driver.session() as session:
         print("=== Initializing Referly Neo4j Schema ===\n")

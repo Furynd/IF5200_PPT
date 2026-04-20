@@ -14,7 +14,7 @@ class FangCollaborativeOptimizer:
         self.config_repository = config_repository
         self._last_error = None
 
-    def optimize(self, user_id: int):
+    def optimize(self, user_id: int) -> None:
         global_bias = self.parameter_repository.get_global_bias()
         user_latent_vector = self.parameter_repository.get_user_latent_vector(user_id)
         user_bias = self.parameter_repository.get_user_bias(user_id)

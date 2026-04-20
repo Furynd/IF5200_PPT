@@ -1,8 +1,8 @@
 import numpy as np
 
-from backend.recommendation.optimizers import FangCollaborativeOptimizer
-from backend.recommendation.updaters import FangVacancyScorerUpdater
-from backend.repositories import ConfigRepository, UserRepository
+from backend.app.recommendation.optimizers import FangCollaborativeOptimizer
+from backend.app.recommendation.updaters import FangVacancyScorerUpdater
+from backend.app.repositories import ConfigRepository, UserRepository
 
 def test_vacancy_scorer_updater_empty_users():
     class MockUserRepository(UserRepository):

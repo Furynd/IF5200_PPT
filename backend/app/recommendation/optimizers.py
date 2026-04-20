@@ -1,6 +1,6 @@
 import numpy as np
 
-from backend.repositories import ConfigRepository, FangCollaborativeParameterRepository, UserRepository
+from backend.app.repositories import ConfigRepository, FangCollaborativeParameterRepository, UserRepository
 
 class FangCollaborativeOptimizer:
     def __init__(

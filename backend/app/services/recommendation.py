@@ -186,7 +186,7 @@ async def get_all_connections(
         conn.latent_vector    AS latent_vector,
         conn.bias             AS bias,
         conn.is_open_to_refer AS is_open_to_refer,
-        length(path) - 1      AS hops,
+        length(path)          AS hops,
         [n IN nodes(path)[1..-1] | n.full_name] AS path_via,
         wa.job_title          AS job_title,
         c.id                  AS company_id,

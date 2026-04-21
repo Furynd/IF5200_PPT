@@ -150,8 +150,7 @@ def rank_connections(seeker: dict, connections: list[dict]) -> list[dict]:
             conn_skill_ids = {s["id"] for s in conn["skills"]}
             score = _jaccard(seeker["skill_ids"], conn_skill_ids)
 
-        hop_penalty = 0.05 * (conn["hops"] - 1)
-        final_score = round(score - hop_penalty, 4)
+        final_score = round(score, 4)
 
         ranked.append({
             "user": {"id": conn["id"], "full_name": conn["full_name"]},
@@ -164,7 +163,7 @@ def rank_connections(seeker: dict, connections: list[dict]) -> list[dict]:
             "score_method": method,
         })
 
-    ranked.sort(key=lambda x: x["score"], reverse=True)
+    ranked.sort(key=lambda x: (x["hops"], -x["score"]))
     return ranked
 
 

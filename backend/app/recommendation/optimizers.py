@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.recommendation.repositories import ConfigRepository, FangCollaborativeParameterRepository, UserRepository
+from backend.app.repositories import ConfigRepository, FangCollaborativeParameterRepository, UserRepository
 
 class FangCollaborativeOptimizer:
     def __init__(
@@ -12,8 +12,9 @@ class FangCollaborativeOptimizer:
         self.parameter_repository = parameter_repository
         self.user_repository = user_repository
         self.config_repository = config_repository
+        self._last_error = None
 
-    def optimize(self, user_id: int):
+    def optimize(self, user_id: int) -> None:
         global_bias = self.parameter_repository.get_global_bias()
         user_latent_vector = self.parameter_repository.get_user_latent_vector(user_id)
         user_bias = self.parameter_repository.get_user_bias(user_id)
@@ -24,6 +25,7 @@ class FangCollaborativeOptimizer:
         skill_tuples = self.user_repository.get_all_skills(user_id)
         skill_latent_vectors = {}
         skill_biases = {}
+        total_error = 0.0
         for skill_id, score in skill_tuples:
             skill_latent_vectors[skill_id] = self.parameter_repository.get_skill_latent_vector(skill_id)
             skill_biases[skill_id] = self.parameter_repository.get_skill_bias(skill_id)
@@ -37,6 +39,7 @@ class FangCollaborativeOptimizer:
             )
 
             predicted_score_grad += 2 * (predicted_score - score)
+            total_error += (predicted_score - score) ** 2
         
         user_latent_vector_grad = 2 * regularization_factor * user_latent_vector
         for skill_id, _ in skill_tuples:
@@ -63,3 +66,9 @@ class FangCollaborativeOptimizer:
         self.parameter_repository.set_global_bias(new_global_bias)
         self.parameter_repository.set_user_bias(user_id, new_user_bias)
         self.parameter_repository.set_user_latent_vector(user_id, new_user_latent_vector)
+
+        self._last_error = total_error
+
+    def get_last_error(self) -> float:
+        assert self._last_error is not None
+        return self._last_error

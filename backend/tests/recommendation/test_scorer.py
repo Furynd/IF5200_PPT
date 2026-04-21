@@ -1,8 +1,8 @@
 import numpy as np
 import numpy.typing as npt
 
-from src.recommendation.repositories import FangCollaborativeParameterRepository, FangContentBasedRepository, VacancyRepository
-from src.recommendation.scorers import FangCollaborativeScorer, FangContentBasedScorer, FangScorer, FangVacancyScorer
+from backend.app.repositories import FangCollaborativeParameterRepository, FangContentBasedRepository, VacancyRepository
+from backend.app.recommendation.scorers import FangCollaborativeScorer, FangContentBasedScorer, FangScorer, FangVacancyScorer
 
 def test_fang_collaborative_scorer():
     chosen_user_id = np.random.randint(999_999_999)

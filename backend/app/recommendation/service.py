@@ -1,4 +1,4 @@
-from src.recommendation.repositories import UserRepository, VacancyRepository
+from backend.app.repositories import UserRepository, VacancyRepository
 
 
 class RecommendationService:

@@ -73,10 +73,22 @@ class UserRepository:
         Return a list of tuples <skill_id, level>.
         """
         raise NotImplementedError
+    
+    def get_all_user_ids(self) -> list[int]:
+        """
+        Return a list of user IDs.
+        """
+        raise NotImplementedError
 
 class ConfigRepository:
     def get_fang_learning_rate(self) -> float:
         raise NotImplementedError
     
     def get_fang_regularization_factor(self) -> float:
+        raise NotImplementedError
+    
+    def get_fang_max_train_error(self) -> float:
+        raise NotImplementedError
+    
+    def get_fang_max_train_steps(self) -> int:
         raise NotImplementedError

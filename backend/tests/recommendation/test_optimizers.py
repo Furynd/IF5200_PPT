@@ -1,8 +1,8 @@
 import numpy as np
 import numpy.typing as npt
 
-from src.recommendation.optimizers import FangCollaborativeOptimizer
-from src.recommendation.repositories import ConfigRepository, FangCollaborativeParameterRepository, UserRepository
+from backend.app.recommendation.optimizers import FangCollaborativeOptimizer
+from backend.app.repositories import ConfigRepository, FangCollaborativeParameterRepository, UserRepository
 
 def test_fang_collaborative_optimizer():
     DIMENSION = 10
@@ -16,6 +16,7 @@ def test_fang_collaborative_optimizer():
     actual_scores: dict[int, float] = {}
 
     predicted_score_grad = 0.0
+    expected_total_error = 0.0
 
     for _ in range(3 + int(np.random.exponential(2))):
         stop = False
@@ -35,6 +36,7 @@ def test_fang_collaborative_optimizer():
                     initial_skill_latent_vectors[skill_id])
         )
         actual_scores[skill_id] = np.random.randn()
+        expected_total_error += (initial_predicted_score - actual_scores[skill_id]) ** 2
         predicted_score_grad += 2 * (initial_predicted_score - actual_scores[skill_id])
 
     learning_rate = np.random.exponential(0.1)
@@ -157,6 +159,7 @@ def test_fang_collaborative_optimizer():
 
     optimizer = FangCollaborativeOptimizer(param_repo, user_repo, config_repo)
     optimizer.optimize(chosen_user_id)
+    actual_total_error = optimizer.get_last_error()
 
     assert abs(param_repo.global_bias - expected_final_global_bias) <= max_error
     assert abs(param_repo.user_bias - expected_final_user_bias) <= max_error
@@ -165,3 +168,5 @@ def test_fang_collaborative_optimizer():
     for skill_id in initial_skill_biases.keys():
         assert abs(param_repo.skill_biases[skill_id] - expected_final_skill_biases[skill_id]) <= max_error
         assert np.all(np.abs(param_repo.skill_latent_vectors[skill_id] - expected_final_skill_latent_vectors[skill_id]) <= max_error)
+
+    assert abs(actual_total_error - expected_total_error) <= 1e-8

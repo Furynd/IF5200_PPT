@@ -34,6 +34,21 @@ async def network_stats(
     return await recommendation.get_network_stats(driver, user_id)
 
 
+@router.get("/connections")
+async def all_connections(
+    user_id: str = Query(default=DEMO_USER_ID),
+    max_hops: int = Query(default=2, ge=1, le=2),
+    driver: AsyncDriver = Depends(get_neo4j_driver),
+):
+    seeker = await recommendation.get_seeker_profile(driver, user_id)
+    if seeker is None:
+        raise HTTPException(status_code=404, detail=f"User {user_id} not found in graph")
+
+    raw = await recommendation.get_all_connections(driver, user_id, max_hops)
+    ranked = recommendation.rank_connections(seeker, raw)
+    return {"connections": ranked}
+
+
 @router.get("/connections/at-company/{company_id}")
 async def connections_at_company(
     company_id: str,

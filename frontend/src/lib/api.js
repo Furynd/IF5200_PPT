@@ -56,6 +56,8 @@ export const api = {
   // Contacts & connections (Week 3)
   syncContacts: (hashes) =>
     request('/contacts/sync', { method: 'POST', body: JSON.stringify({ hashes }) }),
+  getConnections: (maxHops = 2) =>
+    request(`/connections?max_hops=${maxHops}`),
   getConnectionsAtCompany: (companyId, maxHops = 2) =>
     request(`/connections/at-company/${companyId}?max_hops=${maxHops}`),
 

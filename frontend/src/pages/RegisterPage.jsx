@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { api } from '../lib/api'
+import { api, setToken } from '../lib/api'
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ full_name: '', email: '', password: '', phone_number: '' })
@@ -11,7 +11,15 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setLoading(true); setError('')
-    try { await api.register(form); navigate('/login') }
+    try {
+      const data = await api.register(form)
+      if (data?.access_token) {
+        setToken(data.access_token)
+        navigate('/')
+      } else {
+        navigate('/login')
+      }
+    }
     catch (err) { setError(err.message) }
     finally { setLoading(false) }
   }

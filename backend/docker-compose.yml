@@ -21,7 +21,7 @@ services:
     build:
       context: ../frontend
     ports:
-      - "5173:5173"
+      - "3000:3000"
     volumes:
       - ../frontend:/app
       - /app/node_modules
@@ -29,7 +29,7 @@ services:
       - VITE_API_URL=http://api:8000
     depends_on:
       - api
-    command: npm run dev
+    command: npm run dev -- --host 0.0.0.0 --port 3000
 
   postgres:
     image: postgres:15-alpine

@@ -1,21 +1,47 @@
 const API_BASE = '/api'
 
+export function getToken() {
+  return localStorage.getItem('token')
+}
+
+export function setToken(token) {
+  localStorage.setItem('token', token)
+}
+
+export function clearToken() {
+  localStorage.removeItem('token')
+}
+
 async function request(path, options = {}) {
-  const token = localStorage.getItem('token')
+  const token = getToken()
   const headers = { 'Content-Type': 'application/json', ...options.headers }
   if (token) headers['Authorization'] = `Bearer ${token}`
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers })
 
   if (res.status === 401) {
-    localStorage.removeItem('token')
+    clearToken()
     window.location.href = '/login'
     return
   }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: 'Unknown error' }))
-    throw new Error(err.detail || `HTTP ${res.status}`)
+    let message = `HTTP ${res.status}`
+
+    if (typeof err?.detail === 'string') {
+      message = err.detail
+    } else if (Array.isArray(err?.detail)) {
+      // FastAPI validation errors often return detail as an array of objects.
+      message = err.detail
+        .map((item) => item?.msg)
+        .filter(Boolean)
+        .join(', ') || message
+    } else if (typeof err?.message === 'string') {
+      message = err.message
+    }
+
+    throw new Error(message)
   }
 
   return res.json()
@@ -23,8 +49,8 @@ async function request(path, options = {}) {
 
 export const api = {
   // Auth
-  login: (data) => request('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
-  register: (data) => request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+  login: (data) => request('/auth/dev-login', { method: 'POST', body: JSON.stringify(data) }),
+  register: (data) => request('/auth/dev-register', { method: 'POST', body: JSON.stringify(data) }),
   me: () => request('/auth/me'),
 
   // Profile

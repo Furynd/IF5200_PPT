@@ -1,5 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { Home, Search, Send, User, Settings, LogOut } from 'lucide-react'
+import { clearToken } from '../lib/api'
 
 const navItems = [
   { to: '/', icon: Home, label: 'Beranda' },
@@ -13,7 +14,7 @@ export default function Layout() {
   const navigate = useNavigate()
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
+    clearToken()
     navigate('/login')
   }
 

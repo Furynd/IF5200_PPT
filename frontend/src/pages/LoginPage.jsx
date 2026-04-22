@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { api } from '../lib/api'
+import { api, setToken } from '../lib/api'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -14,7 +14,7 @@ export default function LoginPage() {
     setLoading(true); setError('')
     try {
       const data = await api.login({ email, password })
-      localStorage.setItem('token', data.access_token)
+      setToken(data.access_token)
       navigate('/')
     } catch (err) { setError(err.message) }
     finally { setLoading(false) }

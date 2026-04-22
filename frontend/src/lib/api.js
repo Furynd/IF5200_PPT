@@ -44,7 +44,7 @@ async function request(path, options = {}) {
     throw new Error(message)
   }
 
-  return res.json()
+  return res.status === 204 ? null : res.json()
 }
 
 export const api = {
@@ -56,17 +56,22 @@ export const api = {
   // Profile
   getProfile: () => request('/user/profile'),
   updateProfile: (data) => request('/user/profile', { method: 'PUT', body: JSON.stringify(data) }),
+  getNetworkStats: () => request('/user/network-stats'),
 
   // Companies
-  searchCompanies: (q) => request(`/companies/search?q=${encodeURIComponent(q)}`),
+  searchCompanies: (q, limit = 10) =>
+    request(`/companies/search?q=${encodeURIComponent(q)}&limit=${limit}`),
   getCompany: (id) => request(`/companies/${id}`),
 
-  // Connections
-  syncContacts: (hashes) => request('/contacts/sync', { method: 'POST', body: JSON.stringify({ hashes }) }),
-  getConnectionsAtCompany: (companyId) => request(`/connections/at-company/${companyId}`),
+  // Contacts & connections (Week 3)
+  syncContacts: (hashes) =>
+    request('/contacts/sync', { method: 'POST', body: JSON.stringify({ hashes }) }),
+  getConnectionsAtCompany: (companyId, maxHops = 2) =>
+    request(`/connections/at-company/${companyId}?max_hops=${maxHops}`),
 
-  // Referrals
+  // Referrals (Week 5)
   sendReferral: (data) => request('/referrals', { method: 'POST', body: JSON.stringify(data) }),
   getReferrals: () => request('/referrals'),
-  respondReferral: (id, status) => request(`/referrals/${id}/respond`, { method: 'PUT', body: JSON.stringify({ status }) }),
+  respondReferral: (id, status) =>
+    request(`/referrals/${id}/respond`, { method: 'PUT', body: JSON.stringify({ status }) }),
 }

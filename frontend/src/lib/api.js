@@ -1,16 +1,6 @@
+import { getToken, clearToken } from './token'
+
 const API_BASE = '/api'
-
-export function getToken() {
-  return localStorage.getItem('token')
-}
-
-export function setToken(token) {
-  localStorage.setItem('token', token)
-}
-
-export function clearToken() {
-  localStorage.removeItem('token')
-}
 
 async function request(path, options = {}) {
   const token = getToken()

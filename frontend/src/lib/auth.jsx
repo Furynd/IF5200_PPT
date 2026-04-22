@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { api } from './api'
+import { getToken, setToken, clearToken } from './token'
 
 const AuthContext = createContext(null)
 
@@ -9,7 +10,7 @@ export function AuthProvider({ children }) {
 
   // On mount, try to restore session from stored token
   useEffect(() => {
-    const token = localStorage.getItem('token')
+    const token = getToken()
     if (!token) {
       setLoading(false)
       return
@@ -18,7 +19,7 @@ export function AuthProvider({ children }) {
     api.me()
       .then(data => setUser(data))
       .catch(() => {
-        localStorage.removeItem('token')
+        clearToken()
         setUser(null)
       })
       .finally(() => setLoading(false))
@@ -26,7 +27,7 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     const data = await api.login({ email, password })
-    localStorage.setItem('token', data.access_token)
+    setToken(data.access_token)
     const me = await api.me()
     setUser(me)
     return me
@@ -39,7 +40,7 @@ export function AuthProvider({ children }) {
   }, [login])
 
   const logout = useCallback(() => {
-    localStorage.removeItem('token')
+    clearToken()
     setUser(null)
   }, [])
 

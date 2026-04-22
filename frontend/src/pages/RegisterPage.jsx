@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { api, setToken } from '../lib/api'
+import { useAuth } from '../lib/auth'
 
 // Normalize Indonesian phone numbers to E.164 format (+62...)
 function normalizePhone(raw) {
@@ -21,6 +21,7 @@ export default function RegisterPage() {
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const { register } = useAuth()
   const navigate = useNavigate()
 
   const update = (field) => (e) => setForm({ ...form, [field]: e.target.value })
@@ -47,19 +48,14 @@ export default function RegisterPage() {
 
     setLoading(true)
     try {
-      const data = await api.register({
+      await register({
         full_name: form.full_name.trim(),
         email: form.email.trim().toLowerCase(),
         password: form.password,
         phone_number: normalizePhone(form.phone_number),
       })
 
-      if (data?.access_token) {
-        setToken(data.access_token)
-        navigate('/')
-      } else {
-        navigate('/login')
-      }
+      navigate('/profile?welcome=1', { replace: true })
     } catch (err) {
       setError(err.message || 'Gagal mendaftar. Silakan coba lagi.')
     } finally {

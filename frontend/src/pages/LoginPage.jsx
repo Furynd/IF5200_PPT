@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { api, setToken } from '../lib/api'
+import { useAuth } from '../lib/auth'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -16,20 +16,16 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true)
     setError('')
+    setLoading(true)
+
     try {
-      const data = await api.login({ email, password })
-      setToken(data.access_token)
-      navigate('/')
-    } catch (err) { setError(err.message) }
-    finally { setLoading(false) }
-    //   await login(email, password)
-    //   navigate(from, { replace: true })
-    // } catch (err) {
-    //   setError(err.message || 'Email atau password salah')
-    // } finally {
-      // setLoading(false)
+      await login(email, password)
+      navigate(from, { replace: true })
+    } catch (err) {
+      setError(err.message || 'Email atau password salah')
+    } finally {
+      setLoading(false)
     }
   }
 

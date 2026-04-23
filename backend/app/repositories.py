@@ -1,3 +1,4 @@
+import neo4j
 import numpy as np
 import numpy.typing as npt
 
@@ -33,6 +34,10 @@ class FangCollaborativeParameterRepository:
         raise NotImplementedError
 
 class FangContentBasedRepository:
+    """
+    DEPRECATED: Need to change (please check design)
+    """
+
     def get_similar_skills(self, user_id: int, skill_id: int) -> list[tuple[int, float, float]]:
         """
         Return triplet of skill ID, level, and similarity.
@@ -81,14 +86,47 @@ class UserRepository:
         raise NotImplementedError
 
 class ConfigRepository:
+    def __init__(self, driver: neo4j.Driver, config_id: int, database: str | None = None):
+        self.driver = driver
+        self.config_id = config_id
+        self.database = database
+
     def get_fang_learning_rate(self) -> float:
-        raise NotImplementedError
+        records, _, _ = self.driver.execute_query(
+            "MATCH (c:FangConfig {id: $id}) RETURN c.learning_rate AS value;",
+            id=self.config_id,
+            database_=self.database
+        )
+        return float(records[0]["value"])
     
     def get_fang_regularization_factor(self) -> float:
-        raise NotImplementedError
+        records, _, _ = self.driver.execute_query(
+            "MATCH (c:FangConfig {id: $id}) RETURN c.regularization_factor AS value;",
+            id=self.config_id,
+            database_=self.database
+        )
+        return float(records[0]["value"])
     
     def get_fang_max_train_error(self) -> float:
-        raise NotImplementedError
+        records, _, _ = self.driver.execute_query(
+            "MATCH (c:FangConfig {id: $id}) RETURN c.max_train_error AS value;",
+            id=self.config_id,
+            database_=self.database
+        )
+        return float(records[0]["value"])
     
     def get_fang_max_train_steps(self) -> int:
-        raise NotImplementedError
+        records, _, _ = self.driver.execute_query(
+            "MATCH (c:FangConfig {id: $id}) RETURN c.max_train_steps AS value;",
+            id=self.config_id,
+            database_=self.database
+        )
+        return int(records[0]["value"])
+    
+    def get_fang_minimum_similarity(self) -> float:
+        records, _, _ = self.driver.execute_query(
+            "MATCH (c:FangConfig {id: $id}) RETURN c.minimum_similarity AS value;",
+            id=self.config_id,
+            database_=self.database
+        )
+        return float(records[0]["value"])

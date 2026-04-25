@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './lib/auth'
-import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -15,23 +14,19 @@ export default function App() {
   return (
     <AuthProvider>
       <Routes>
-        {/* Public routes */}
+        {/* Public routes — manage their own navbar */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* Protected routes (require login) */}
-        {/* <Route element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }> */}
+        {/* Authenticated routes — wrapped in sidebar Layout */}
+        <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/company/:id" element={<CompanyPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/referrals" element={<ReferralsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
-        {/* </Route> */}
+        </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

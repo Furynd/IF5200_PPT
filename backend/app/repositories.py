@@ -1,3 +1,5 @@
+from typing import Callable
+
 import neo4j
 import numpy as np
 import numpy.typing as npt
@@ -130,3 +132,60 @@ class ConfigRepository:
             database_=self.database
         )
         return float(records[0]["value"])
+
+class SkillRepository:
+    def __init__(self, driver: neo4j.Driver, database: str | None = None):
+        self.driver = driver
+        self.database = database
+
+    def create_new_embeddings_if_not_exists(self, embed_id: int):
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (c:Embeddings {id: $id})
+                RETURN c;
+            """,
+            id=embed_id,
+            database_=self.database
+        )
+        if len(records) > 0:
+            return
+        
+        self.driver.execute_query(
+            """
+                CREATE (c:Embeddings {id: $embed_id});
+            """,
+            embed_id=embed_id,
+            database_=self.database
+        )
+
+    def update_all_uninitialized_embeddings(self, embed_id: int, embed_fn: Callable[[str], list[float]]):
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (c:Embeddings {id: $id})
+                MATCH (s:Skill)
+                WHERE NOT (c)--(s)
+                RETURN s.id AS id, s.name AS name;
+            """,
+            id=embed_id,
+            database_=self.database
+        )
+        for r in records:
+            r_id = r["id"]  # can be str or int
+            r_name = str(r["name"])
+            r_embed = embed_fn(r_name)
+
+            self.driver.execute_query(
+                """
+                    MATCH (c:Embeddings {id: $embed_id})
+                    MATCH (s:Skill {id: $skill_id})
+                    CREATE (c)-[:HAS_EMBEDDING {values: vector($values, $length, FLOAT)}]->(s);
+                """,
+                embed_id=embed_id,
+                skill_id=r_id,
+                values=r_embed,
+                length=len(r_embed),
+                database_=self.database
+            )
+            print(f"Embedding for {r_name} (id: {r_id}) has been initialized!")
+
+        return len(records)

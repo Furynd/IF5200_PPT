@@ -150,8 +150,7 @@ def rank_connections(seeker: dict, connections: list[dict]) -> list[dict]:
             conn_skill_ids = {s["id"] for s in conn["skills"]}
             score = _jaccard(seeker["skill_ids"], conn_skill_ids)
 
-        hop_penalty = 0.05 * (conn["hops"] - 1)
-        final_score = round(score - hop_penalty, 4)
+        final_score = round(score, 4)
 
         ranked.append({
             "user": {"id": conn["id"], "full_name": conn["full_name"]},
@@ -164,8 +163,84 @@ def rank_connections(seeker: dict, connections: list[dict]) -> list[dict]:
             "score_method": method,
         })
 
-    ranked.sort(key=lambda x: x["score"], reverse=True)
+    ranked.sort(key=lambda x: (x["hops"], -x["score"]))
     return ranked
+
+
+async def get_all_connections(
+    driver: AsyncDriver,
+    user_id: str,
+    max_hops: int = 2,
+) -> list[dict]:
+    """
+    Fetch all connections (1- and 2-hop) regardless of company, deduplicated by min hop.
+    Includes company context when available.
+    """
+    path_query = f"""
+    MATCH path = (me:User {{id: $user_id}})-[:CONNECTED_TO*1..{max_hops}]-(conn:User)
+    WHERE conn.id <> $user_id
+    OPTIONAL MATCH (conn)-[wa:WORKS_AT]->(c:Company)
+    RETURN
+        conn.id               AS id,
+        conn.full_name        AS full_name,
+        conn.latent_vector    AS latent_vector,
+        conn.bias             AS bias,
+        conn.is_open_to_refer AS is_open_to_refer,
+        length(path)          AS hops,
+        [n IN nodes(path)[1..-1] | n.full_name] AS path_via,
+        wa.job_title          AS job_title,
+        c.id                  AS company_id,
+        c.name                AS company_name
+    ORDER BY hops ASC
+    """
+
+    skills_query = """
+    UNWIND $conn_ids AS conn_id
+    MATCH (conn:User {id: conn_id})-[hs:HAS_SKILL]->(s:Skill)
+    RETURN conn_id, s.id AS skill_id, s.name AS skill_name, hs.level AS level
+    """
+
+    async with driver.session() as session:
+        path_result = await session.run(path_query, user_id=user_id)
+        path_records = await path_result.data()
+
+    seen: dict[str, dict] = {}
+    for r in path_records:
+        cid = r["id"]
+        if cid not in seen or r["hops"] < seen[cid]["hops"]:
+            seen[cid] = r
+
+    if not seen:
+        return []
+
+    async with driver.session() as session:
+        skills_result = await session.run(skills_query, conn_ids=list(seen.keys()))
+        skills_records = await skills_result.data()
+
+    skills_by_conn: dict[str, list] = {cid: [] for cid in seen}
+    for s in skills_records:
+        skills_by_conn[s["conn_id"]].append({
+            "id": s["skill_id"],
+            "name": s["skill_name"],
+            "level": s["level"],
+        })
+
+    return [
+        {
+            "id": r["id"],
+            "full_name": r["full_name"],
+            "latent_vector": list(r["latent_vector"] or []),
+            "bias": float(r["bias"] or 0.0),
+            "is_open_to_refer": r["is_open_to_refer"],
+            "hops": r["hops"],
+            "path_via": r["path_via"] or [],
+            "job_title": r["job_title"],
+            "company_id": r["company_id"],
+            "company_name": r["company_name"],
+            "skills": skills_by_conn.get(r["id"], []),
+        }
+        for r in seen.values()
+    ]
 
 
 async def get_network_stats(driver: AsyncDriver, user_id: str) -> dict:

@@ -1,3 +1,29 @@
+<<<<<<< HEAD
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+*.egg-info/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
+=======
 # Local environment files
 backend/.env
 
@@ -32,3 +58,4 @@ dist/
 .vscode/
 .idea/
 
+>>>>>>> e3a1faf88b454447f05be8573c688390a90f6882

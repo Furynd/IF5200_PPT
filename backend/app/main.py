@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db.neo4j import init_neo4j, close_neo4j
-from app.routers import connections, companies
+from app.routers import connections, companies, cv
 
 
 @asynccontextmanager
@@ -25,3 +25,4 @@ app.add_middleware(
 
 app.include_router(connections.router, prefix="/api")
 app.include_router(companies.router, prefix="/api")
+app.include_router(cv.router, prefix="/api")

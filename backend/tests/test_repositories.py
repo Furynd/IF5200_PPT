@@ -10,11 +10,11 @@ def prepare_neo4j_driver_and_database_name():
     load_dotenv()
 
     NEO4J_URI = os.getenv("NEO4J_URI", "neo4j+s://xxxxx.databases.neo4j.io")
-    NEO4J_USER = os.getenv("NEO4J_USERNAME", "neo4j")
+    NEO4J_USERNAME = os.getenv("NEO4J_USERNAME", "neo4j")
     NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "your-password-here")
     NEO4J_DATABASE = os.getenv("NEO4J_DATABASE", "neo4j")
 
-    driver = neo4j.GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+    driver = neo4j.GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
     return driver, NEO4J_DATABASE
 
 def is_unoccupied_config_id(driver: neo4j.Driver, config_id: int):

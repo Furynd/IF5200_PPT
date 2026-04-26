@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Any, Callable
 
 import neo4j
 import numpy as np
@@ -8,31 +8,31 @@ class FangCollaborativeParameterRepository:
     def get_global_bias(self) -> float:
         raise NotImplementedError
     
-    def get_user_latent_vector(self, user_id: int) -> npt.NDArray[np.float64]:
+    def get_user_latent_vector(self, user_id) -> npt.NDArray[np.float64]:
         raise NotImplementedError
     
-    def get_user_bias(self, user_id: int) -> float:
+    def get_user_bias(self, user_id) -> float:
         raise NotImplementedError
     
-    def get_skill_latent_vector(self, skill_id: int) -> npt.NDArray[np.float64]:
+    def get_skill_latent_vector(self, skill_id) -> npt.NDArray[np.float64]:
         raise NotImplementedError
     
-    def get_skill_bias(self, skill_id: int) -> float:
+    def get_skill_bias(self, skill_id) -> float:
         raise NotImplementedError
     
     def set_global_bias(self, value: float) -> None:
         raise NotImplementedError
     
-    def set_user_latent_vector(self, user_id: int, value: npt.NDArray[np.float64]) -> None:
+    def set_user_latent_vector(self, user_id, value: npt.NDArray[np.float64]) -> None:
         raise NotImplementedError
     
-    def set_user_bias(self, user_id: int, value: float) -> None:
+    def set_user_bias(self, user_id, value: float) -> None:
         raise NotImplementedError
     
-    def set_skill_latent_vector(self, skill_id: int, value: npt.NDArray[np.float64]) -> None:
+    def set_skill_latent_vector(self, skill_id, value: npt.NDArray[np.float64]) -> None:
         raise NotImplementedError
     
-    def set_skill_bias(self, skill_id: int, value: float) -> None:
+    def set_skill_bias(self, skill_id, value: float) -> None:
         raise NotImplementedError
 
 class FangContentBasedRepository:
@@ -40,55 +40,55 @@ class FangContentBasedRepository:
     DEPRECATED: Need to change (please check design)
     """
 
-    def get_similar_skills(self, user_id: int, skill_id: int) -> list[tuple[int, float, float]]:
+    def get_similar_skills(self, user_id, skill_id) -> list[tuple[Any, float, float]]:
         """
         Return triplet of skill ID, level, and similarity.
         """
         raise NotImplementedError
 
 class VacancyRepository:
-    def get_required_skills(self, id: int) -> list[int]:
+    def get_required_skills(self, id) -> list[int]:
         raise NotImplementedError
     
-    def get_info(self, id: int) -> tuple[int, str, str]:
+    def get_info(self, id) -> tuple[Any, str, str]:
         """
         Returns a tuple <company_id, description, source_url>.
         """
         raise NotImplementedError
 
 class UserRepository:
-    def get_connections(self, id: int) -> list[tuple[int, float]]:
+    def get_connections(self, id) -> list[tuple[Any, float]]:
         """
         Return a list of tuples <user_id, score> in one hop. Scores are cached in database.
         """
         raise NotImplementedError
     
-    def get_suggested_connections(self, id: int) -> list[tuple[int, float]]:
+    def get_suggested_connections(self, id) -> list[tuple[Any, float]]:
         """
         Return a list of tuples <user_id, score> in two hops. Scores are cached in database.
         """
         raise NotImplementedError
     
-    def get_vacancies_from_current_companies(self, id: int) -> list[tuple[int, float]]:
+    def get_vacancies_from_current_companies(self, id) -> list[tuple[Any, float]]:
         """
         Return a list of tuples <vacancy_id, score> that connects to user's companies. Scores are cached in database.
         """
         raise NotImplementedError
     
-    def get_all_skills(self, id: int) -> list[tuple[int, float]]:
+    def get_all_skills(self, id) -> list[tuple[Any, float]]:
         """
         Return a list of tuples <skill_id, level>.
         """
         raise NotImplementedError
     
-    def get_all_user_ids(self) -> list[int]:
+    def get_all_user_ids(self) -> list[Any]:
         """
         Return a list of user IDs.
         """
         raise NotImplementedError
 
 class ConfigRepository:
-    def __init__(self, driver: neo4j.Driver, config_id: int, database: str | None = None):
+    def __init__(self, driver: neo4j.Driver, config_id, database: str | None = None):
         self.driver = driver
         self.config_id = config_id
         self.database = database

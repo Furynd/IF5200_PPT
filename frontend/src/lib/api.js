@@ -5,14 +5,13 @@ const API_BASE = '/api'
 async function request(path, options = {}) {
   const token = getToken()
   const headers = { 'Content-Type': 'application/json', ...options.headers }
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  if (token && !headers['Authorization']) headers['Authorization'] = `Bearer ${token}`
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers })
 
   if (res.status === 401) {
     clearToken()
-    window.location.href = '/login'
-    return
+    throw new Error('Unauthorized')
   }
 
   if (!res.ok) {
@@ -41,6 +40,7 @@ export const api = {
   // Auth
   login: (data) => request('/auth/dev-login', { method: 'POST', body: JSON.stringify(data) }),
   register: (data) => request('/auth/dev-register', { method: 'POST', body: JSON.stringify(data) }),
+  syncAuthProfile: (data) => request('/auth/sync', { method: 'POST', body: JSON.stringify(data) }),
   me: () => request('/auth/me'),
 
   // Profile

@@ -1,5 +1,6 @@
 # Local environment files
 backend/.env
+frontend/.env
 
 # Python bytecode and caches
 __pycache__/
@@ -12,6 +13,7 @@ __pycache__/
 .venv/
 venv/
 env/
+.env
 
 # Tool caches
 .pytest_cache/

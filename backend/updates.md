@@ -1,3 +1,14 @@
+feat: enhance authentication with Supabase integration and OAuth support
+
+- Updated backend to support JWT decoding with both HS256 and JWKS methods.
+- Added environment variables for Supabase configuration in backend and frontend.
+- Introduced Supabase client in frontend for authentication and user management.
+- Refactored authentication logic to handle OAuth login with Google and LinkedIn.
+- Improved user session management and error handling during login and registration.
+- Updated frontend components to reflect changes in authentication flow and user state.
+
+------------------------------------------------------------------------------------------
+
 Add initial backend setup with database configurations and dependencies
 
 - Create .gitignore for environment and cache files

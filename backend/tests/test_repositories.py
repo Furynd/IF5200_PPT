@@ -559,6 +559,122 @@ def test_vacancy_repository_get_all_vacancy_ids():
                 database_=NEO4J_DATABASE,
                 id=CHOSEN_VACANCY_ID
             )
+
+def test_vacancy_repository_get_info():
+    driver, NEO4J_DATABASE = prepare_neo4j_driver_and_database_name()
+    CHOSEN_COMPANY_ID = np.random.randint(999_999_999)
+    CHOSEN_VACANCY_ID = np.random.randint(999_999_999)
+    CHOSEN_DESCRIPTION = f"description-{CHOSEN_VACANCY_ID}"
+    CHOSEN_SOURCE_URL = f"url-{CHOSEN_VACANCY_ID}"
+    
+    with driver:
+        try:
+            driver.execute_query(
+                """
+                    CREATE (c:Company {
+                        id: $id
+                    });
+                """,
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_COMPANY_ID
+            )
+
+            driver.execute_query(
+                """
+                    CREATE (c:Vacancy {
+                        id: $id,
+                        description: $description,
+                        source_url: $source_url
+                    });
+                """,
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_VACANCY_ID,
+                description=CHOSEN_DESCRIPTION,
+                source_url=CHOSEN_SOURCE_URL
+            )
+
+            driver.execute_query(
+                """
+                    MATCH (c:Company {id: $company_id})
+                    MATCH (v:Vacancy {id: $vacancy_id})
+                    CREATE (c)-[:OPENS]->(v)
+                """,
+                database_=NEO4J_DATABASE,
+                company_id=CHOSEN_COMPANY_ID,
+                vacancy_id=CHOSEN_VACANCY_ID,
+            )
+
+            repo = VacancyRepository(driver, database=NEO4J_DATABASE)
+            company_id, description, source_url = repo.get_info(CHOSEN_VACANCY_ID)
+            # What if the company is unknown? Maybe later.
+            assert description == CHOSEN_DESCRIPTION
+            assert source_url == CHOSEN_SOURCE_URL
+            assert company_id == CHOSEN_COMPANY_ID
+        finally:
+            driver.execute_query("MATCH (c:Vacancy {id: $id}) DETACH DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_VACANCY_ID
+            )
+            driver.execute_query("MATCH (c:Company {id: $id}) DETACH DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_COMPANY_ID
+            )
+
+def test_vacancy_repository_get_required_skills():
+    driver, NEO4J_DATABASE = prepare_neo4j_driver_and_database_name()
+    CHOSEN_VACANCY_ID = np.random.randint(999_999_999)
+    CHOSEN_SKILL_ID = np.random.randint(999_999_999)
+    CHOSEN_UNEXPECTED_SKILL_ID = np.random.randint(999_999_999)
+    
+    with driver:
+        try:
+            driver.execute_query(
+                """
+                    CREATE (v:Vacancy {id: $id});
+                """,
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_VACANCY_ID,
+            )
+            driver.execute_query(
+                """
+                    CREATE (s:Skill {id: $id});
+                """,
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_SKILL_ID,
+            )
+            driver.execute_query(
+                """
+                    MATCH (v:Vacancy {id: $vacancy_id})
+                    MATCH (s:Skill {id: $skill_id})
+                    CREATE (v)-[:REQUIRES]->(s);
+                """,
+                database_=NEO4J_DATABASE,
+                vacancy_id=CHOSEN_VACANCY_ID,
+                skill_id=CHOSEN_SKILL_ID,
+            )
+
+            driver.execute_query(
+                """
+                    CREATE (s:Skill {id: $id});
+                """,
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_UNEXPECTED_SKILL_ID,
+            )
+
+            repo = VacancyRepository(driver, database=NEO4J_DATABASE)
+            result = repo.get_required_skills(CHOSEN_VACANCY_ID)
+            assert CHOSEN_SKILL_ID in result
+            assert CHOSEN_UNEXPECTED_SKILL_ID not in result
+
+        finally:
+            driver.execute_query("MATCH (c:Vacancy {id: $id}) DETACH DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_VACANCY_ID
+            )
+            driver.execute_query("MATCH (c:Skill {id: $id}) DETACH DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_SKILL_ID
+            )
         
 def test_fang_repository_get_global_bias_node_not_exists():
     np.random.seed(120)

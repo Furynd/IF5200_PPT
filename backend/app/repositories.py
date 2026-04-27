@@ -353,14 +353,46 @@ class VacancyRepository:
         self.driver = driver
         self.database = database
 
-    def get_required_skills(self, id) -> list[int]:
-        raise NotImplementedError
+    def get_required_skills(self, id) -> list[Any]:
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (:Vacancy {id: $id})-[:REQUIRES]->(s:Skill)
+                RETURN s.id AS id;
+            """,
+            database_=self.database,
+            id=id,
+        )
+        return [r["id"] for r in records]
     
     def get_info(self, id) -> tuple[Any, str, str]:
         """
         Returns a tuple <company_id, description, source_url>.
         """
-        raise NotImplementedError
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (v:Vacancy {id: $id})
+                RETURN v.description AS description, v.source_url AS source_url;
+            """,
+            database_=self.database,
+            id=id
+        )
+        assert len(records) > 0
+        record = records[0]
+        description = str(record["description"])
+        source_url = str(record["source_url"])
+
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (c:Company)-[:OPENS]->(v:Vacancy {id: $id})
+                RETURN c.id AS id;
+            """,
+            database_=self.database,
+            id=id
+        )
+        assert len(records) > 0
+        company_id = records[0]["id"]
+
+        return (company_id, description, source_url)
     
     def get_all_vacancy_ids(self) -> list[Any]:
         """

@@ -36,3 +36,19 @@ class RecommendationService:
         result.sort(key=lambda x: x["score"], reverse=True)
         
         return result
+    
+    def get_connections_from_specific_company(self, user_id, company_id):
+        result = []
+        for connected_user_id, score in self.user_repository.get_connections_for_specific_company(user_id, company_id):
+            result.append({"user_id": connected_user_id, "score": score})
+        result.sort(key=lambda x: x["score"], reverse=True)
+
+        return result
+    
+    def get_suggested_connections_from_specific_company(self, user_id, company_id):
+        result = []
+        for connected_user_id, score in self.user_repository.get_suggested_connections_for_specific_company(user_id, company_id):
+            result.append({"user_id": connected_user_id, "score": score})
+        result.sort(key=lambda x: x["score"], reverse=True)
+
+        return result

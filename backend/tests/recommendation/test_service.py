@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 
 from backend.app.repositories import UserRepository, VacancyRepository
@@ -179,3 +181,114 @@ def test_get_vacancies_from_target():
         assert len(actual_el) == len(expected_el)
         for key, expected_value in expected_el.items():
             assert actual_el[key] == expected_value
+
+def test_get_connections_from_specific_company_unsorted():
+    chosen_user_id = np.random.randint(999_999_999)
+    chosen_company_id = np.random.randint(999_999_999)
+    connections: dict[int, float] = {}
+
+    for _ in range(5 + int(np.random.exponential(5))):
+        stop = False
+        new_user_id = -1
+        while not stop:
+            new_user_id = np.random.randint(999_999_999)
+            stop = (
+                new_user_id != chosen_user_id
+                and new_user_id not in connections
+            )
+
+        connections[new_user_id] = np.random.random()
+
+    expected_result = [
+        {
+            "user_id": user_id,
+            "score": score
+        } for user_id, score in connections.items()
+    ]
+    expected_result.sort(key=lambda x: x["score"], reverse=True)
+
+    class MockUserRepository(UserRepository):
+        def __init__(self):
+            self.fetch_limit = 1
+
+        def _fetch(self):
+            assert self.fetch_limit > 0
+            self.fetch_limit -= 1
+        
+        def get_connections_for_specific_company(self, id, company_id) -> list[tuple[Any, float]]:
+            assert id == chosen_user_id
+            assert company_id == chosen_company_id
+            self._fetch()
+            return [(k, v) for k, v in connections.items()]
+        
+    class MockVacancyRepository(VacancyRepository):
+        def __init__(self):
+            pass
+        
+    user_repo = MockUserRepository()
+    vacancy_repo = MockVacancyRepository()
+
+    service = RecommendationService(user_repo, vacancy_repo)
+    actual_result = service.get_connections_from_specific_company(chosen_user_id, chosen_company_id)
+
+    assert len(actual_result) == len(expected_result)
+    for actual_el, expected_el in zip(actual_result, expected_result):
+        assert len(actual_el) == len(expected_el)
+        for key, expected_value in expected_el.items():
+            assert actual_el[key] == expected_value
+
+def test_get_suggested_connections_from_specific_company_unsorted():
+    chosen_user_id = np.random.randint(999_999_999)
+    chosen_company_id = np.random.randint(999_999_999)
+    connections: dict[int, float] = {}
+
+    for _ in range(5 + int(np.random.exponential(5))):
+        stop = False
+        new_user_id = -1
+        while not stop:
+            new_user_id = np.random.randint(999_999_999)
+            stop = (
+                new_user_id != chosen_user_id
+                and new_user_id not in connections
+            )
+
+        connections[new_user_id] = np.random.random()
+
+    expected_result = [
+        {
+            "user_id": user_id,
+            "score": score
+        } for user_id, score in connections.items()
+    ]
+    expected_result.sort(key=lambda x: x["score"], reverse=True)
+
+    class MockUserRepository(UserRepository):
+        def __init__(self):
+            self.fetch_limit = 1
+
+        def _fetch(self):
+            assert self.fetch_limit > 0
+            self.fetch_limit -= 1
+        
+        def get_suggested_connections_for_specific_company(self, id, company_id) -> list[tuple[Any, float]]:
+            assert id == chosen_user_id
+            assert company_id == chosen_company_id
+            self._fetch()
+            return [(k, v) for k, v in connections.items()]
+        
+    class MockVacancyRepository(VacancyRepository):
+        def __init__(self):
+            pass
+        
+    user_repo = MockUserRepository()
+    vacancy_repo = MockVacancyRepository()
+
+    service = RecommendationService(user_repo, vacancy_repo)
+    actual_result = service.get_suggested_connections_from_specific_company(chosen_user_id, chosen_company_id)
+
+    assert len(actual_result) == len(expected_result)
+    for actual_el, expected_el in zip(actual_result, expected_result):
+        assert len(actual_el) == len(expected_el)
+        for key, expected_value in expected_el.items():
+            assert actual_el[key] == expected_value
+

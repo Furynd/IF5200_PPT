@@ -437,6 +437,56 @@ class UserRepository:
             for r in records
         ]
     
+    def get_connections_for_specific_company(self, id, company_id) -> list[tuple[Any, float]]:
+        """
+        Return a list of tuples <user_id, score> in one hop. Scores are cached in database.
+        """
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (n:User {id: $id})
+                    -[:CONNECTED_TO]-(n2:User)
+                    -[:WORKS_AT]->(:Company {id: $company_id})
+                    -[:OPENS]->(v:Vacancy)
+                    -[e:SUGGESTED_TO]->(n)
+                RETURN n2.id AS id, MAX(e.score) AS score;
+            """,
+            database_=self.database,
+            id=id,
+            company_id=company_id
+        )
+        return [
+            (r["id"], float(r["score"]))
+            for r in records
+        ]
+    
+    def get_suggested_connections_for_specific_company(self, id, company_id) -> list[tuple[Any, float]]:
+        """
+        Return a list of tuples <user_id, score> in two hops. Scores are cached in database.
+        """
+        """
+        Return a list of tuples <user_id, score> in one hop. Scores are cached in database.
+        """
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (n:User {id: $id})
+                    -[:CONNECTED_TO]-(:User)
+                    -[:CONNECTED_TO]-(n2:User)
+                    -[:WORKS_AT]->(:Company {id: $company_id})
+                    -[:OPENS]->(v:Vacancy)
+                    -[e:SUGGESTED_TO]->(n)
+                WHERE n <> n2
+                AND NOT (n)-[:CONNECTED_TO]-(n2)
+                RETURN n2.id AS id, MAX(e.score) AS score;
+            """,
+            database_=self.database,
+            id=id,
+            company_id=company_id,
+        )
+        return [
+            (r["id"], float(r["score"]))
+            for r in records
+        ]
+    
     def get_all_skills(self, id) -> list[tuple[Any, float]]:
         """
         Return a list of tuples <skill_id, level>.

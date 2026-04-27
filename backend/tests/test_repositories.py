@@ -355,6 +355,78 @@ def test_user_repository_get_vacancies_from_target_current_companies():
                 id=CHOSEN_TARGET_USER_ID
             )
 
+def test_user_repository_get_connections_for_specific_company():
+    driver, NEO4J_DATABASE = prepare_neo4j_driver_and_database_name()
+    CHOSEN_USER_ID = np.random.randint(999_999_999)
+    CHOSEN_COMPANY_ID = np.random.randint(999_999_999)
+
+    with driver:
+        driver.execute_query(
+            """
+                CREATE (c:User {id: $id});
+            """,
+            database_=NEO4J_DATABASE,
+            id=CHOSEN_USER_ID,
+        )
+        driver.execute_query(
+            """
+                CREATE (c:Company {id: $id});
+            """,
+            database_=NEO4J_DATABASE,
+            id=CHOSEN_COMPANY_ID,
+        )
+
+        try:
+            repo = UserRepository(driver, database=NEO4J_DATABASE)
+            result = repo.get_connections_for_specific_company(CHOSEN_USER_ID, CHOSEN_COMPANY_ID)
+            assert isinstance(result, list)
+            assert len(result) == 0
+        finally:
+            driver.execute_query("MATCH (c:User {id: $id}) DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_USER_ID
+            )
+            driver.execute_query("MATCH (c:Company {id: $id}) DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_COMPANY_ID
+            )
+
+def test_user_repository_get_suggested_connections_for_specific_company():
+    driver, NEO4J_DATABASE = prepare_neo4j_driver_and_database_name()
+    CHOSEN_USER_ID = np.random.randint(999_999_999)
+    CHOSEN_COMPANY_ID = np.random.randint(999_999_999)
+
+    with driver:
+        driver.execute_query(
+            """
+                CREATE (c:User {id: $id});
+            """,
+            database_=NEO4J_DATABASE,
+            id=CHOSEN_USER_ID,
+        )
+        driver.execute_query(
+            """
+                CREATE (c:Company {id: $id});
+            """,
+            database_=NEO4J_DATABASE,
+            id=CHOSEN_COMPANY_ID,
+        )
+
+        try:
+            repo = UserRepository(driver, database=NEO4J_DATABASE)
+            result = repo.get_suggested_connections_for_specific_company(CHOSEN_USER_ID, CHOSEN_COMPANY_ID)
+            assert isinstance(result, list)
+            assert len(result) == 0
+        finally:
+            driver.execute_query("MATCH (c:User {id: $id}) DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_USER_ID
+            )
+            driver.execute_query("MATCH (c:Company {id: $id}) DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_COMPANY_ID
+            )
+
 def test_fang_repository_get_global_bias_node_not_exists():
     np.random.seed(120)
     CONFIG_ID = np.random.randint(999_999_999)

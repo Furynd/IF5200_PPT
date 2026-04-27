@@ -5,35 +5,348 @@ import numpy as np
 import numpy.typing as npt
 
 class FangCollaborativeParameterRepository:
+    def __init__(self, driver: neo4j.Driver, config_id, database: str | None = None):
+        self.driver = driver
+        self.config_id = config_id
+        self.database = database
+
+    def _get_config_node(self):
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (c:FangConfig {id: $id})
+                RETURN c;
+            """,
+            database_=self.database,
+            id=self.config_id,
+        )
+        if len(records) == 0:
+            return None
+        else:
+            return records[0]["c"]
+        
+    def _get_user_edge(self, user_id):
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (:FangConfig {id: $id})-[e:ASSIGNS_PARAMETERS]->(:User {id: $user_id})
+                RETURN e;
+            """,
+            database_=self.database,
+            id=self.config_id,
+            user_id=user_id
+        )
+        if len(records) == 0:
+            return None
+        else:
+            return records[0]["e"]
+        
+    def _get_skill_edge(self, skill_id):
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (:FangConfig {id: $id})-[e:ASSIGNS_PARAMETERS]->(:Skill {id: $skill_id})
+                RETURN e;
+            """,
+            database_=self.database,
+            id=self.config_id,
+            skill_id=skill_id
+        )
+        if len(records) == 0:
+            return None
+        else:
+            return records[0]["e"]
+        
+    def _create_new_config_node_and_return_global_bias(self, global_bias: float | None = None):
+        if global_bias is None:
+            global_bias = np.random.random()
+        
+        self.driver.execute_query(
+            """
+                CREATE (c:FangConfig {
+                    id: $id,
+                    global_bias: $value,
+                    embeddings_id: 120,
+                    latent_vector_dimension: 16,
+                    learning_rate: 0.01,
+                    max_train_error: 0.01,
+                    max_train_steps: 100,
+                    minimum_similarity: 0.87,
+                    regularization_factor: 0.01
+                })
+            """,
+            database_=self.database,
+            id=self.config_id,
+            value=global_bias,
+        )
+        return global_bias
+
     def get_global_bias(self) -> float:
-        raise NotImplementedError
+        record = self._get_config_node()
+
+        if record is None:
+            new_value = self._create_new_config_node_and_return_global_bias()
+            return new_value
+        
+        old_value = record["global_bias"]
+        if old_value is not None:
+            return float(old_value)
+        
+        new_value = np.random.randn()
+        self.driver.execute_query(
+            """
+                MATCH (c:FangConfig {
+                    id: $id
+                })
+                SET c.global_bias = $global_bias;
+            """,
+            database_=self.database,
+            id=self.config_id,
+            global_bias=new_value,
+        )
+        return new_value
+    
+    def _create_new_user_parameters(
+            self,
+            user_id,
+            *,
+            latent_vector: npt.NDArray[np.float64] | None = None,
+            bias: float | None = None
+    ) -> tuple[npt.NDArray[np.float64], float]:
+        record = self._get_config_node()
+        assert record is not None
+        dimension = int(record["latent_vector_dimension"])
+
+        if latent_vector is None:
+            latent_vector = np.random.randn(dimension)
+        
+        if bias is None:
+            bias = np.random.randn()
+        
+        self.driver.execute_query(
+            """
+                MATCH (c:FangConfig {id: $id})
+                MATCH (u:User {id: $user_id})
+                CREATE (c)-[:ASSIGNS_PARAMETERS {latent_vector: vector($latent_vector, $dimension, FLOAT), bias: $bias}]->(u);
+            """,
+            database_=self.database,
+            id=self.config_id,
+            user_id=user_id,
+            latent_vector=latent_vector.tolist(),
+            dimension=dimension,
+            bias=bias,
+        )
+        return (latent_vector, bias)
     
     def get_user_latent_vector(self, user_id) -> npt.NDArray[np.float64]:
-        raise NotImplementedError
+        record = self._get_config_node()
+
+        if record is None:
+            self._create_new_config_node_and_return_global_bias()
+            new_value, _ = self._create_new_user_parameters(user_id)
+            return new_value
+        
+        record = self._get_user_edge(user_id)
+        if record is None:
+            new_value, _ = self._create_new_user_parameters(user_id)
+            return new_value
+        
+        return np.array(record["latent_vector"].to_native())
     
     def get_user_bias(self, user_id) -> float:
-        raise NotImplementedError
+        record = self._get_config_node()
+
+        if record is None:
+            self._create_new_config_node_and_return_global_bias()
+            _, new_value = self._create_new_user_parameters(user_id)
+            return new_value
+        
+        record = self._get_user_edge(user_id)
+        if record is None:
+            _, new_value = self._create_new_user_parameters(user_id)
+            return new_value
+        
+        return float(record["bias"])
     
+    def _create_new_skill_parameters(
+            self,
+            skill_id,
+            *,
+            latent_vector: npt.NDArray[np.float64] | None = None,
+            bias: float | None = None
+    ) -> tuple[npt.NDArray[np.float64], float]:
+        record = self._get_config_node()
+        assert record is not None
+        dimension = int(record["latent_vector_dimension"])
+
+        if latent_vector is None:
+            latent_vector = np.random.randn(dimension)
+        
+        if bias is None:
+            bias = np.random.randn()
+        
+        self.driver.execute_query(
+            """
+                MATCH (c:FangConfig {id: $id})
+                MATCH (s:Skill {id: $skill_id})
+                CREATE (c)-[:ASSIGNS_PARAMETERS {latent_vector: vector($latent_vector, $dimension, FLOAT), bias: $bias}]->(s);
+            """,
+            database_=self.database,
+            id=self.config_id,
+            skill_id=skill_id,
+            latent_vector=latent_vector.tolist(),
+            dimension=dimension,
+            bias=bias,
+        )
+        return (latent_vector, bias)
+
     def get_skill_latent_vector(self, skill_id) -> npt.NDArray[np.float64]:
-        raise NotImplementedError
+        record = self._get_config_node()
+
+        if record is None:
+            self._create_new_config_node_and_return_global_bias()
+            new_value, _ = self._create_new_skill_parameters(skill_id)
+            return new_value
+        
+        record = self._get_skill_edge(skill_id)
+        if record is None:
+            new_value, _ = self._create_new_skill_parameters(skill_id)
+            return new_value
+        
+        return np.array(record["latent_vector"].to_native())
     
     def get_skill_bias(self, skill_id) -> float:
-        raise NotImplementedError
+        record = self._get_config_node()
+
+        if record is None:
+            self._create_new_config_node_and_return_global_bias()
+            _, new_value = self._create_new_skill_parameters(skill_id)
+            return new_value
+        
+        record = self._get_skill_edge(skill_id)
+        if record is None:
+            _, new_value = self._create_new_skill_parameters(skill_id)
+            return new_value
+        
+        return float(record["bias"])
     
     def set_global_bias(self, value: float) -> None:
-        raise NotImplementedError
+        record = self._get_config_node()
+
+        if record is None:
+            self._create_new_config_node_and_return_global_bias(value)
+            return
+        
+        self.driver.execute_query(
+            """
+                MATCH (c:FangConfig {id: $id})
+                SET c.global_bias = $value;
+            """,
+            database_=self.database,
+            id=self.config_id,
+            value=value
+        )
     
     def set_user_latent_vector(self, user_id, value: npt.NDArray[np.float64]) -> None:
-        raise NotImplementedError
+        record = self._get_config_node()
+
+        if record is None:
+            self._create_new_config_node_and_return_global_bias()
+            record = self._get_config_node()
+            assert record is not None
+        
+        dimension = int(record["latent_vector_dimension"])
+        assert len(value) == dimension
+
+        record = self._get_user_edge(user_id)
+        if record is None:
+            self._create_new_user_parameters(user_id, latent_vector=value)
+            return
+        
+        self.driver.execute_query(
+            """
+                MATCH (c:FangConfig {id: $id})-[e:ASSIGNS_PARAMETERS]->(u:User {id: $user_id})
+                SET e.latent_vector = vector($latent_vector, $dimension, FLOAT);
+            """,
+            database_=self.database,
+            id=self.config_id,
+            user_id=user_id,
+            latent_vector=value,
+            dimension=dimension
+        )
     
     def set_user_bias(self, user_id, value: float) -> None:
-        raise NotImplementedError
+        record = self._get_config_node()
+
+        if record is None:
+            self._create_new_config_node_and_return_global_bias()
+            record = self._get_config_node()
+            assert record is not None
+
+        record = self._get_user_edge(user_id)
+        if record is None:
+            self._create_new_user_parameters(user_id, bias=value)
+            return
+        
+        self.driver.execute_query(
+            """
+                MATCH (c:FangConfig {id: $id})-[e:ASSIGNS_PARAMETERS]->(u:User {id: $user_id})
+                SET e.bias = $bias;
+            """,
+            database_=self.database,
+            id=self.config_id,
+            user_id=user_id,
+            bias=value
+        )
     
     def set_skill_latent_vector(self, skill_id, value: npt.NDArray[np.float64]) -> None:
-        raise NotImplementedError
+        record = self._get_config_node()
+
+        if record is None:
+            self._create_new_config_node_and_return_global_bias()
+            record = self._get_config_node()
+            assert record is not None
+        
+        dimension = int(record["latent_vector_dimension"])
+        assert len(value) == dimension
+
+        record = self._get_skill_edge(skill_id)
+        if record is None:
+            self._create_new_skill_parameters(skill_id, latent_vector=value)
+            return
+        
+        self.driver.execute_query(
+            """
+                MATCH (c:FangConfig {id: $id})-[e:ASSIGNS_PARAMETERS]->(s:Skill {id: $skill_id})
+                SET e.latent_vector = vector($latent_vector, $dimension, FLOAT);
+            """,
+            database_=self.database,
+            id=self.config_id,
+            skill_id=skill_id,
+            latent_vector=value,
+            dimension=dimension
+        )
     
     def set_skill_bias(self, skill_id, value: float) -> None:
-        raise NotImplementedError
+        record = self._get_config_node()
+
+        if record is None:
+            self._create_new_config_node_and_return_global_bias()
+            record = self._get_config_node()
+            assert record is not None
+
+        record = self._get_skill_edge(skill_id)
+        if record is None:
+            self._create_new_skill_parameters(skill_id, bias=value)
+            return
+        
+        self.driver.execute_query(
+            """
+                MATCH (c:FangConfig {id: $id})-[e:ASSIGNS_PARAMETERS]->(s:Skill {id: $skill_id})
+                SET e.bias = $bias;
+            """,
+            database_=self.database,
+            id=self.config_id,
+            skill_id=skill_id,
+            bias=value,
+        )
 
 class VacancyRepository:
     def get_required_skills(self, id) -> list[int]:
@@ -158,6 +471,14 @@ class ConfigRepository:
     def get_embeddings_id(self) -> int:
         records, _, _ = self.driver.execute_query(
             "MATCH (c:FangConfig {id: $id}) RETURN c.embeddings_id AS value;",
+            id=self.config_id,
+            database_=self.database
+        )
+        return int(records[0]["value"])
+    
+    def get_latent_vector_dimension(self) -> int:
+        records, _, _ = self.driver.execute_query(
+            "MATCH (c:FangConfig {id: $id}) RETURN c.latent_vector_dimension AS value;",
             id=self.config_id,
             database_=self.database
         )

@@ -281,10 +281,16 @@ def test_user_repository_get_connections_no_connection():
             id=CHOSEN_USER_ID,
         )
 
-        repo = UserRepository(driver, database=NEO4J_DATABASE)
-        result = repo.get_connections(CHOSEN_USER_ID)
-        assert isinstance(result, list)
-        assert len(result) == 0
+        try:
+            repo = UserRepository(driver, database=NEO4J_DATABASE)
+            result = repo.get_connections(CHOSEN_USER_ID)
+            assert isinstance(result, list)
+            assert len(result) == 0
+        finally:
+            driver.execute_query("MATCH (c:User {id: $id}) DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_USER_ID
+            )
 
 def test_user_repository_get_suggested_connections_no_connection():
     driver, NEO4J_DATABASE = prepare_neo4j_driver_and_database_name()
@@ -299,10 +305,55 @@ def test_user_repository_get_suggested_connections_no_connection():
             id=CHOSEN_USER_ID,
         )
 
-        repo = UserRepository(driver, database=NEO4J_DATABASE)
-        result = repo.get_suggested_connections(CHOSEN_USER_ID)
-        assert isinstance(result, list)
-        assert len(result) == 0
+        try:
+            repo = UserRepository(driver, database=NEO4J_DATABASE)
+            result = repo.get_suggested_connections(CHOSEN_USER_ID)
+            assert isinstance(result, list)
+            assert len(result) == 0
+        finally:
+            driver.execute_query("MATCH (c:User {id: $id}) DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_USER_ID
+            )
+
+def test_user_repository_get_vacancies_from_target_current_companies():
+    driver, NEO4J_DATABASE = prepare_neo4j_driver_and_database_name()
+    CHOSEN_USER_ID = np.random.randint(999_999_999)
+    CHOSEN_TARGET_USER_ID = np.random.randint(999_999_999)
+
+    with driver:
+        try:
+            driver.execute_query(
+                """
+                    CREATE (c:User {id: $id});
+                """,
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_USER_ID,
+            )
+            driver.execute_query(
+                """
+                    CREATE (c:User {id: $id});
+                """,
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_TARGET_USER_ID,
+            )
+
+            repo = UserRepository(driver, database=NEO4J_DATABASE)
+            result = repo.get_vacancies_from_target_current_companies(
+                CHOSEN_USER_ID,
+                CHOSEN_TARGET_USER_ID
+            )
+            assert isinstance(result, list)
+            assert len(result) == 0
+        finally:
+            driver.execute_query("MATCH (c:User {id: $id}) DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_USER_ID
+            )
+            driver.execute_query("MATCH (c:User {id: $id}) DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_TARGET_USER_ID
+            )
 
 def test_fang_repository_get_global_bias_node_not_exists():
     np.random.seed(120)

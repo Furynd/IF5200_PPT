@@ -415,10 +415,27 @@ class UserRepository:
         """
         Return a list of tuples <vacancy_id, score> that connects to target user's companies.
         Scores are cached in database.
-        
+
         This is used for recommendation.
         """
-        raise NotImplementedError
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (n2:User {id: $target_id})
+                    -[:WORKS_AT]->(:Company)
+                    -[:OPENS]->(v:Vacancy)
+                    -[e:SUGGESTED_TO]->(n:User {id: $id})
+                WHERE n <> n2
+                AND NOT (n)-[:CONNECTED_TO]-(n2)
+                RETURN DISTINCT v.id AS id, e.score AS score;
+            """,
+            database_=self.database,
+            id=id,
+            target_id=target_user_id
+        )
+        return [
+            (r["id"], float(r["score"]))
+            for r in records
+        ]
     
     def get_all_skills(self, id) -> list[tuple[Any, float]]:
         """

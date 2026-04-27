@@ -411,9 +411,12 @@ class UserRepository:
             for r in records
         ]
     
-    def get_vacancies_from_current_companies(self, id) -> list[tuple[Any, float]]:
+    def get_vacancies_from_target_current_companies(self, id, target_user_id) -> list[tuple[Any, float]]:
         """
-        Return a list of tuples <vacancy_id, score> that connects to user's companies. Scores are cached in database.
+        Return a list of tuples <vacancy_id, score> that connects to target user's companies.
+        Scores are cached in database.
+        
+        This is used for recommendation.
         """
         raise NotImplementedError
     

@@ -22,9 +22,9 @@ class RecommendationService:
 
         return result
     
-    def get_vacancies(self, user_id):
+    def get_vacancies_from_target(self, user_id, target_user_id):
         result = []
-        for vacancy_id, score in self.user_repository.get_vacancies_from_current_companies(user_id):
+        for vacancy_id, score in self.user_repository.get_vacancies_from_target_current_companies(user_id, target_user_id):
             company_id, description, source_url = self.vacancy_repository.get_info(vacancy_id)
             result.append({
                 "company_id": company_id,

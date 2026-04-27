@@ -2,25 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../lib/auth'
-
-function PublicNavbar() {
-  return (
-    <header className="bg-white border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        <span className="font-bold text-slate-900 text-xl">Referly</span>
-        <nav className="hidden md:flex items-center gap-8 text-sm text-gray-600">
-          <a href="#" className="hover:text-slate-900">Home</a>
-          <a href="#" className="hover:text-slate-900">About</a>
-          <Link to="/register" className="hover:text-slate-900">Registration</Link>
-        </nav>
-        <div className="flex items-center gap-3">
-          <Link to="/login" className="text-sm font-medium text-slate-900 underline underline-offset-2">Log In</Link>
-          <Link to="/register" className="text-sm font-medium bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors">Sign Up</Link>
-        </div>
-      </div>
-    </header>
-  )
-}
+import PublicNavbar from '../components/PublicNavbar'
+import PublicFooter from '../components/PublicFooter'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -31,7 +14,7 @@ export default function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = location.state?.from?.pathname || '/'
+  const from = location.state?.from?.pathname || '/network'
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -139,19 +122,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <footer className="bg-white border-t border-gray-200 py-6">
-        <div className="max-w-7xl mx-auto px-6 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <span className="font-bold text-slate-900">Referly</span>
-            <p className="text-xs text-gray-400 mt-0.5">© 2026 Referly. All rights reserved.</p>
-          </div>
-          <div className="flex gap-6 text-xs text-gray-500">
-            <a href="#" className="hover:text-slate-700">Privacy Policy</a>
-            <a href="#" className="hover:text-slate-700">Terms of Service</a>
-            <a href="#" className="hover:text-slate-700">Contact</a>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   )
 }

@@ -540,7 +540,15 @@ class UserRepository:
         """
         Return a list of tuples <skill_id, level>.
         """
-        raise NotImplementedError
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (:User {id: $id})-[hs:HAS_SKILL]->(s:Skill)
+                RETURN s.id AS id, hs.level AS level;
+            """,
+            database_=self.database,
+            id=id
+        )
+        return [(r["id"], float(r["level"])) for r in records]
     
     def get_all_user_ids(self) -> list[Any]:
         """

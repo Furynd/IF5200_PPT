@@ -538,6 +538,63 @@ def test_user_repository_set_vacancy_score_set_twice():
                 id=CHOSEN_VACANCY_ID
             )
 
+def test_user_repository_get_all_skills():
+    driver, NEO4J_DATABASE = prepare_neo4j_driver_and_database_name()
+    CHOSEN_USER_ID = np.random.randint(999_999_999)
+    CHOSEN_SKILL_ID = np.random.randint(999_999_999)
+    CHOSEN_SKILL_LEVEL = 1 + np.random.randint(4)
+    
+    with driver:
+        try:
+            driver.execute_query(
+                """
+                    CREATE (u:User {id: $id});
+                """,
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_USER_ID,
+            )
+            driver.execute_query(
+                """
+                    CREATE (s:Skill {id: $id});
+                """,
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_SKILL_ID,
+            )
+            driver.execute_query(
+                """
+                    MATCH (u:User {id: $user_id})
+                    MATCH (s:Skill {id: $skill_id})
+                    CREATE (u)-[:HAS_SKILL {level: $level}]->(s);
+                """,
+                database_=NEO4J_DATABASE,
+                user_id=CHOSEN_USER_ID,
+                skill_id=CHOSEN_SKILL_ID,
+                level=CHOSEN_SKILL_LEVEL
+            )
+
+            repo = UserRepository(driver, database=NEO4J_DATABASE)
+            result = repo.get_all_skills(CHOSEN_USER_ID)
+            assert (CHOSEN_SKILL_ID, CHOSEN_SKILL_LEVEL) in result
+
+            # records, _, _ = driver.execute_query(
+            #     "MATCH (:Vacancy {id: $vacancy_id})-[s:SUGGESTED_TO]->(:User {id: $user_id}) RETURN s.decided_at AS decided_at, s.score AS score;",
+            #     vacancy_id=CHOSEN_SKILL_ID,
+            #     user_id=CHOSEN_USER_ID,
+            # )
+            # assert len(records) == 1
+            # assert records[0]["decided_at"] is not None
+            # assert abs(records[0]["score"] - CHOSEN_SKILL_LEVEL) <= 1e-8
+            
+        finally:
+            driver.execute_query("MATCH (c:User {id: $id}) DETACH DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_USER_ID
+            )
+            driver.execute_query("MATCH (c:Skill {id: $id}) DETACH DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_SKILL_ID
+            )
+
 def test_vacancy_repository_get_all_vacancy_ids():
     driver, NEO4J_DATABASE = prepare_neo4j_driver_and_database_name()
     CHOSEN_VACANCY_ID = np.random.randint(999_999_999)

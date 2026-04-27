@@ -61,10 +61,10 @@ USERS = [
         "company_id": None,
         "job_title": None,
         "skills": [
-            ("skill-001", "advanced"),   # Python
-            ("skill-009", "advanced"),   # Machine Learning
-            ("skill-010", "intermediate"),  # Data Analysis
-            ("skill-007", "beginner"),   # React
+            ("skill-001", 4),   # Python
+            ("skill-009", 4),   # Machine Learning
+            ("skill-010", 3),  # Data Analysis
+            ("skill-007", 2),   # React
         ],
     },
 
@@ -80,10 +80,10 @@ USERS = [
         "company_id": "comp-001",   # GoTo
         "job_title": "Senior Data Scientist",
         "skills": [
-            ("skill-001", "advanced"),   # Python
-            ("skill-009", "advanced"),   # Machine Learning
-            ("skill-010", "advanced"),   # Data Analysis
-            ("skill-017", "intermediate"),  # Cloud
+            ("skill-001", 4),   # Python
+            ("skill-009", 4),   # Machine Learning
+            ("skill-010", 4),   # Data Analysis
+            ("skill-017", 3),  # Cloud
         ],
     },
     {
@@ -96,9 +96,9 @@ USERS = [
         "company_id": "comp-001",   # GoTo
         "job_title": "Product Designer",
         "skills": [
-            ("skill-007", "advanced"),   # React
-            ("skill-002", "advanced"),   # JavaScript
-            ("skill-012", "advanced"),   # UI/UX
+            ("skill-007", 4),   # React
+            ("skill-002", 4),   # JavaScript
+            ("skill-012", 4),   # UI/UX
         ],
     },
     {
@@ -111,10 +111,10 @@ USERS = [
         "company_id": "comp-001",   # GoTo
         "job_title": "DevOps Engineer",
         "skills": [
-            ("skill-001", "advanced"),   # Python
-            ("skill-018", "advanced"),   # DevOps
-            ("skill-017", "advanced"),   # Cloud
-            ("skill-006", "intermediate"),  # SQL
+            ("skill-001", 4),   # Python
+            ("skill-018", 4),   # DevOps
+            ("skill-017", 4),   # Cloud
+            ("skill-006", 3),  # SQL
         ],
     },
     {
@@ -127,10 +127,10 @@ USERS = [
         "company_id": "comp-003",   # Shopee
         "job_title": "Data Analyst",
         "skills": [
-            ("skill-010", "advanced"),   # Data Analysis
-            ("skill-006", "advanced"),   # SQL
-            ("skill-009", "intermediate"),  # ML
-            ("skill-001", "intermediate"),  # Python
+            ("skill-010", 4),   # Data Analysis
+            ("skill-006", 4),   # SQL
+            ("skill-009", 3),  # ML
+            ("skill-001", 3),  # Python
         ],
     },
     {
@@ -143,9 +143,9 @@ USERS = [
         "company_id": "comp-021",   # BCA
         "job_title": "Financial Analyst",
         "skills": [
-            ("skill-014", "advanced"),   # Financial Analysis
-            ("skill-006", "intermediate"),  # SQL
-            ("skill-016", "advanced"),   # Communication
+            ("skill-014", 4),   # Financial Analysis
+            ("skill-006", 3),  # SQL
+            ("skill-016", 4),   # Communication
         ],
     },
     {
@@ -158,9 +158,9 @@ USERS = [
         "company_id": "comp-004",   # Traveloka
         "job_title": "Product Manager",
         "skills": [
-            ("skill-020", "advanced"),   # Product Management
-            ("skill-016", "advanced"),   # Communication
-            ("skill-015", "intermediate"),  # Business Development
+            ("skill-020", 4),   # Product Management
+            ("skill-016", 4),   # Communication
+            ("skill-015", 3),  # Business Development
         ],
     },
     {
@@ -173,9 +173,9 @@ USERS = [
         "company_id": "comp-001",   # GoTo
         "job_title": "Backend Engineer",
         "skills": [
-            ("skill-004", "advanced"),   # Java
-            ("skill-006", "advanced"),   # SQL
-            ("skill-018", "intermediate"),  # DevOps
+            ("skill-004", 4),   # Java
+            ("skill-006", 4),   # SQL
+            ("skill-018", 3),  # DevOps
         ],
     },
     {
@@ -188,9 +188,9 @@ USERS = [
         "company_id": "comp-002",   # Grab
         "job_title": "ML Engineer",
         "skills": [
-            ("skill-001", "advanced"),   # Python
-            ("skill-009", "advanced"),   # Machine Learning
-            ("skill-010", "intermediate"),  # Data Analysis
+            ("skill-001", 4),   # Python
+            ("skill-009", 4),   # Machine Learning
+            ("skill-010", 3),  # Data Analysis
         ],
     },
     # Not open to refer — should be excluded from results
@@ -204,8 +204,8 @@ USERS = [
         "company_id": "comp-001",   # GoTo
         "job_title": "Software Engineer",
         "skills": [
-            ("skill-001", "intermediate"),  # Python
-            ("skill-005", "intermediate"),  # Go
+            ("skill-001", 3),  # Python
+            ("skill-005", 3),  # Go
         ],
     },
 
@@ -221,9 +221,9 @@ USERS = [
         "company_id": "comp-001",   # GoTo
         "job_title": "Staff ML Engineer",
         "skills": [
-            ("skill-009", "advanced"),   # Machine Learning
-            ("skill-001", "advanced"),   # Python
-            ("skill-017", "advanced"),   # Cloud
+            ("skill-009", 4),   # Machine Learning
+            ("skill-001", 4),   # Python
+            ("skill-017", 4),   # Cloud
         ],
     },
     {
@@ -236,9 +236,9 @@ USERS = [
         "company_id": "comp-001",   # GoTo
         "job_title": "Frontend Engineer",
         "skills": [
-            ("skill-007", "advanced"),   # React
-            ("skill-003", "advanced"),   # TypeScript
-            ("skill-002", "advanced"),   # JavaScript
+            ("skill-007", 4),   # React
+            ("skill-003", 4),   # TypeScript
+            ("skill-002", 4),   # JavaScript
         ],
     },
     {
@@ -251,9 +251,9 @@ USERS = [
         "company_id": "comp-003",   # Shopee
         "job_title": "Senior Data Analyst",
         "skills": [
-            ("skill-010", "advanced"),   # Data Analysis
-            ("skill-006", "advanced"),   # SQL
-            ("skill-001", "intermediate"),  # Python
+            ("skill-010", 4),   # Data Analysis
+            ("skill-006", 4),   # SQL
+            ("skill-001", 3),  # Python
         ],
     },
     {
@@ -266,10 +266,10 @@ USERS = [
         "company_id": "comp-049",   # Google Indonesia
         "job_title": "Software Engineer",
         "skills": [
-            ("skill-009", "advanced"),   # Machine Learning
-            ("skill-001", "advanced"),   # Python
-            ("skill-017", "advanced"),   # Cloud
-            ("skill-019", "intermediate"),  # Cybersecurity
+            ("skill-009", 4),   # Machine Learning
+            ("skill-001", 4),   # Python
+            ("skill-017", 4),   # Cloud
+            ("skill-019", 3),  # Cybersecurity
         ],
     },
     {
@@ -282,9 +282,9 @@ USERS = [
         "company_id": "comp-004",   # Traveloka
         "job_title": "Business Analyst",
         "skills": [
-            ("skill-015", "advanced"),   # Business Development
-            ("skill-020", "intermediate"),  # Product Management
-            ("skill-016", "advanced"),   # Communication
+            ("skill-015", 4),   # Business Development
+            ("skill-020", 3),  # Product Management
+            ("skill-016", 4),   # Communication
         ],
     },
     {
@@ -297,9 +297,9 @@ USERS = [
         "company_id": "comp-001",   # GoTo
         "job_title": "Platform Engineer",
         "skills": [
-            ("skill-005", "advanced"),   # Go
-            ("skill-018", "advanced"),   # DevOps
-            ("skill-006", "intermediate"),  # SQL
+            ("skill-005", 4),   # Go
+            ("skill-018", 4),   # DevOps
+            ("skill-006", 3),  # SQL
         ],
     },
 
@@ -314,7 +314,7 @@ USERS = [
         "bias": 0.02,
         "company_id": "comp-001",   # GoTo — same company, but not reachable
         "job_title": "HR Business Partner",
-        "skills": [("skill-016", "advanced")],
+        "skills": [("skill-016", 4)],
     },
     {
         "id": "user-018",
@@ -325,7 +325,7 @@ USERS = [
         "bias": 0.03,
         "company_id": "comp-050",   # Microsoft
         "job_title": "Cloud Architect",
-        "skills": [("skill-017", "advanced"), ("skill-001", "advanced")],
+        "skills": [("skill-017", 4), ("skill-001", 4)],
     },
     {
         "id": "user-019",
@@ -336,7 +336,7 @@ USERS = [
         "bias": 0.02,
         "company_id": "comp-015",   # Ruangguru
         "job_title": "UX Lead",
-        "skills": [("skill-012", "advanced"), ("skill-007", "advanced")],
+        "skills": [("skill-012", 4), ("skill-007", 4)],
     },
     {
         "id": "user-020",
@@ -347,7 +347,7 @@ USERS = [
         "bias": 0.05,
         "company_id": "comp-003",   # Shopee — same as Maya but unreachable
         "job_title": "Analytics Engineer",
-        "skills": [("skill-010", "advanced"), ("skill-006", "advanced")],
+        "skills": [("skill-010", 4), ("skill-006", 4)],
     },
 ]
 

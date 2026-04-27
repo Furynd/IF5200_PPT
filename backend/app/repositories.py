@@ -35,17 +35,6 @@ class FangCollaborativeParameterRepository:
     def set_skill_bias(self, skill_id, value: float) -> None:
         raise NotImplementedError
 
-class FangContentBasedRepository:
-    """
-    DEPRECATED: Need to change (please check design)
-    """
-
-    def get_similar_skills(self, user_id, skill_id) -> list[tuple[Any, float, float]]:
-        """
-        Return triplet of skill ID, level, and similarity.
-        """
-        raise NotImplementedError
-
 class VacancyRepository:
     def get_required_skills(self, id) -> list[int]:
         raise NotImplementedError
@@ -57,6 +46,10 @@ class VacancyRepository:
         raise NotImplementedError
 
 class UserRepository:
+    def __init__(self, driver: neo4j.Driver, database: str | None = None):
+        self.driver = driver
+        self.database = database
+
     def get_connections(self, id) -> list[tuple[Any, float]]:
         """
         Return a list of tuples <user_id, score> in one hop. Scores are cached in database.
@@ -86,6 +79,35 @@ class UserRepository:
         Return a list of user IDs.
         """
         raise NotImplementedError
+    
+    def get_all_similar_skills(
+            self,
+            id,
+            skill_id,
+            embed_id: int,
+            min_sim_score: float
+    ) -> list[tuple[Any, float, float]]:
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (m:Embeddings {id: $embed_id})
+                MATCH (u:User {id: $user_id})
+                MATCH (m)-[e1:HAS_EMBEDDING]->(n:Skill {id: $skill_id})
+                MATCH (u)-[e2:HAS_SKILL]->(n2:Skill)
+                MATCH (m)-[e3:HAS_EMBEDDING]->(n2)
+                WITH n2.id AS id, e2.level AS level, vector.similarity.cosine(e1.values, e3.values) as sim_score
+                WHERE sim_score >= $min_sim_score
+                RETURN DISTINCT id, level, sim_score;
+            """,
+            database_=self.database,
+            user_id=id,
+            skill_id=skill_id,
+            embed_id=embed_id,
+            min_sim_score=min_sim_score,
+        )
+        return [
+            (r["id"], float(r["level"]), float(r["sim_score"]))
+            for r in records
+        ]
 
 class ConfigRepository:
     def __init__(self, driver: neo4j.Driver, config_id, database: str | None = None):
@@ -132,6 +154,14 @@ class ConfigRepository:
             database_=self.database
         )
         return float(records[0]["value"])
+    
+    def get_embeddings_id(self) -> int:
+        records, _, _ = self.driver.execute_query(
+            "MATCH (c:FangConfig {id: $id}) RETURN c.embeddings_id AS value;",
+            id=self.config_id,
+            database_=self.database
+        )
+        return int(records[0]["value"])
 
 class SkillRepository:
     def __init__(self, driver: neo4j.Driver, database: str | None = None):

@@ -1,6 +1,6 @@
 import numpy as np
 
-from backend.app.repositories import FangCollaborativeParameterRepository, FangContentBasedRepository, VacancyRepository
+from backend.app.repositories import ConfigRepository, FangCollaborativeParameterRepository, UserRepository, VacancyRepository
 
 class FangCollaborativeScorer:
     def __init__(self, repository: FangCollaborativeParameterRepository):
@@ -22,14 +22,19 @@ class FangCollaborativeScorer:
         )
     
 class FangContentBasedScorer:
-    def __init__(self, repository: FangContentBasedRepository):
-        self.repo = repository
+    def __init__(
+            self,
+            user_repository: UserRepository,
+            config_repository: ConfigRepository
+        ):
+        self.user_repo = user_repository
+        self.config_repo = config_repository
 
     def get_score(self, user_id, skill_id) -> float:
-        similar_skills = self.repo.get_similar_skills(user_id, skill_id)
-        if len(similar_skills) == 0:
-            return 0.0
-
+        embed_id = self.config_repo.get_embeddings_id()
+        min_sim_score = self.config_repo.get_fang_minimum_similarity()
+        similar_skills = self.user_repo.get_all_similar_skills(user_id, skill_id, embed_id, min_sim_score)
+        
         score_numerator = 0.0
         score_denumerator = 0.0
         for _, level, sim in similar_skills:

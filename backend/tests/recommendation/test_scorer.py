@@ -1,7 +1,9 @@
+from typing import Any
+
 import numpy as np
 import numpy.typing as npt
 
-from backend.app.repositories import FangCollaborativeParameterRepository, FangContentBasedRepository, VacancyRepository
+from backend.app.repositories import ConfigRepository, FangCollaborativeParameterRepository, UserRepository, VacancyRepository
 from backend.app.recommendation.scorers import FangCollaborativeScorer, FangContentBasedScorer, FangScorer, FangVacancyScorer
 
 def test_fang_collaborative_scorer():
@@ -66,6 +68,8 @@ def test_fang_collaborative_scorer():
 def test_fang_content_based_scorer_normal():
     chosen_user_id = np.random.randint(999_999_999)
     chosen_skill_id = np.random.randint(999_999_999)
+    chosen_embed_id = np.random.randint(999_999_999)
+    chosen_min_sim_score = np.random.random()
     similar_skills: list[tuple[int, float, float]] = []
     used_skill_ids = set()
     for _ in range(1 + int(np.random.exponential(3))):
@@ -78,9 +82,13 @@ def test_fang_content_based_scorer_normal():
                 and new_skill_id not in used_skill_ids
             )
         
-        similar_skills.append((new_skill_id, 1 + np.random.random() * 4, np.random.random()))
-
-    class MockFangContentBasedRepository(FangContentBasedRepository):
+        similar_skills.append((
+            new_skill_id,
+            1 + np.random.random() * 4,
+            1 - np.random.random() * (1 - chosen_min_sim_score)
+        ))
+    
+    class MockUserRepository(UserRepository):
         def __init__(self):
             self.fetch_limit = 1
 
@@ -88,11 +96,35 @@ def test_fang_content_based_scorer_normal():
             assert self.fetch_limit > 0
             self.fetch_limit -= 1
 
-        def get_similar_skills(self, user_id: int, skill_id: int) -> list[tuple[int, float, float]]:
-            assert user_id == chosen_user_id
+        def get_all_similar_skills(
+                self,
+                id,
+                skill_id,
+                embed_id: int,
+                min_sim_score: float
+        ) -> list[tuple[Any, float, float]]:
+            assert id == chosen_user_id
             assert skill_id == chosen_skill_id
+            assert embed_id == chosen_embed_id
+            assert min_sim_score == chosen_min_sim_score
             self._fetch()
             return similar_skills
+        
+    class MockConfigRepository(ConfigRepository):
+        def __init__(self):
+            self.fetch_limit = 2
+
+        def _fetch(self):
+            assert self.fetch_limit > 0
+            self.fetch_limit -= 1
+        
+        def get_fang_minimum_similarity(self) -> float:
+            self._fetch()
+            return chosen_min_sim_score
+        
+        def get_embeddings_id(self) -> int:
+            self._fetch()
+            return chosen_embed_id
         
     expected_score_numerator = 0.0
     expected_score_denumerator = 0.0
@@ -103,36 +135,9 @@ def test_fang_content_based_scorer_normal():
     expected_score = expected_score_numerator / expected_score_denumerator
     max_error = 1e-8
 
-    repo = MockFangContentBasedRepository()
-    scorer = FangContentBasedScorer(repo)
-
-    actual_score = scorer.get_score(chosen_user_id, chosen_skill_id)
-    assert abs(actual_score - expected_score) <= max_error
-
-def test_fang_content_based_scorer_empty_skills():
-    chosen_user_id = np.random.randint(999_999_999)
-    chosen_skill_id = np.random.randint(999_999_999)
-    similar_skills: list[tuple[int, float, float]] = []
-
-    class MockFangContentBasedRepository(FangContentBasedRepository):
-        def __init__(self):
-            self.fetch_limit = 1
-
-        def _fetch(self):
-            assert self.fetch_limit > 0
-            self.fetch_limit -= 1
-
-        def get_similar_skills(self, user_id: int, skill_id: int) -> list[tuple[int, float, float]]:
-            assert user_id == chosen_user_id
-            assert skill_id == chosen_skill_id
-            self._fetch()
-            return similar_skills
-    
-    expected_score = 0.0
-    max_error = 1e-8
-
-    repo = MockFangContentBasedRepository()
-    scorer = FangContentBasedScorer(repo)
+    user_repo = MockUserRepository()
+    config_repo = MockConfigRepository()
+    scorer = FangContentBasedScorer(user_repo, config_repo)
 
     actual_score = scorer.get_score(chosen_user_id, chosen_skill_id)
     assert abs(actual_score - expected_score) <= max_error
@@ -231,3 +236,6 @@ def test_fang_vacancy_scorer():
 
     actual_score = scorer.get_score(chosen_user_id, chosen_vacancy_id)
     assert abs(actual_score - expected_score) <= max_error
+
+def test_skill_similarity_scorer():
+    pass

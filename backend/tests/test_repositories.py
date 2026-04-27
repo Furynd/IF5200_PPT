@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import neo4j
 import numpy as np
 
-from backend.app.repositories import ConfigRepository
+from backend.app.repositories import ConfigRepository, UserRepository
 
 def prepare_neo4j_driver_and_database_name():
     load_dotenv()
@@ -178,3 +178,47 @@ def test_config_repository_get_fang_max_train_steps():
                 database_=NEO4J_DATABASE,
                 id=CONFIG_ID
             )
+
+def test_config_repository_get_embeddings_id():
+    np.random.seed(120)
+    CONFIG_ID = np.random.randint(999_999_999)
+    CHOSEN_EMBEDDINGS_ID = np.random.randint(999_999_999)
+    driver, NEO4J_DATABASE = prepare_neo4j_driver_and_database_name()
+
+    with driver:
+        assert is_unoccupied_config_id(driver, CONFIG_ID), "Config ID is already occupied; change your seed."
+
+        driver.execute_query(
+            """
+                CREATE (:FangConfig {
+                    id: $id,
+                    embeddings_id: $embeddings_id
+                });
+            """,
+            database_=NEO4J_DATABASE,
+            id=CONFIG_ID,
+            embeddings_id=CHOSEN_EMBEDDINGS_ID
+        )
+
+        try:
+            repo = ConfigRepository(driver, config_id=CONFIG_ID, database=NEO4J_DATABASE)
+            result = repo.get_embeddings_id()
+            assert result == CHOSEN_EMBEDDINGS_ID
+        finally:
+            driver.execute_query("MATCH (c:FangConfig {id: $id}) DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CONFIG_ID
+            )
+
+def test_user_repository_get_all_similar_skills():
+    driver, NEO4J_DATABASE = prepare_neo4j_driver_and_database_name()
+
+    with driver:
+        repo = UserRepository(driver, database=NEO4J_DATABASE)
+        repo.get_all_similar_skills(
+            id="user-012",
+            skill_id="skill-002",
+            embed_id=120,
+            min_sim_score=0.87
+        )
+        # Make sure it's not error.

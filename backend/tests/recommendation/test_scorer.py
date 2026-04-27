@@ -236,6 +236,3 @@ def test_fang_vacancy_scorer():
 
     actual_score = scorer.get_score(chosen_user_id, chosen_vacancy_id)
     assert abs(actual_score - expected_score) <= max_error
-
-def test_skill_similarity_scorer():
-    pass

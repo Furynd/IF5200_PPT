@@ -367,13 +367,49 @@ class UserRepository:
         """
         Return a list of tuples <user_id, score> in one hop. Scores are cached in database.
         """
-        raise NotImplementedError
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (n:User {id: $id})
+                    -[:CONNECTED_TO]-(n2:User)
+                    -[:WORKS_AT]->(:Company)
+                    -[:OPENS]->(v:Vacancy)
+                    -[e:SUGGESTED_TO]->(n)
+                RETURN n2.id AS id, MAX(e.score) AS score;
+            """,
+            database_=self.database,
+            id=id,
+        )
+        return [
+            (r["id"], float(r["score"]))
+            for r in records
+        ]
     
     def get_suggested_connections(self, id) -> list[tuple[Any, float]]:
         """
         Return a list of tuples <user_id, score> in two hops. Scores are cached in database.
         """
-        raise NotImplementedError
+        """
+        Return a list of tuples <user_id, score> in one hop. Scores are cached in database.
+        """
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (n:User {id: $id})
+                    -[:CONNECTED_TO]-(:User)
+                    -[:CONNECTED_TO]-(n2:User)
+                    -[:WORKS_AT]->(:Company)
+                    -[:OPENS]->(v:Vacancy)
+                    -[e:SUGGESTED_TO]->(n)
+                WHERE n <> n2
+                AND NOT (n)-[:CONNECTED_TO]-(n2)
+                RETURN n2.id AS id, MAX(e.score) AS score;
+            """,
+            database_=self.database,
+            id=id,
+        )
+        return [
+            (r["id"], float(r["score"]))
+            for r in records
+        ]
     
     def get_vacancies_from_current_companies(self, id) -> list[tuple[Any, float]]:
         """

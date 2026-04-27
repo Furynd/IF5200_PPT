@@ -268,6 +268,42 @@ def test_user_repository_get_all_similar_skills():
         )
         # Make sure it's not error.
 
+def test_user_repository_get_connections_no_connection():
+    driver, NEO4J_DATABASE = prepare_neo4j_driver_and_database_name()
+    CHOSEN_USER_ID = np.random.randint(999_999_999)
+
+    with driver:
+        driver.execute_query(
+            """
+                CREATE (c:User {id: $id});
+            """,
+            database_=NEO4J_DATABASE,
+            id=CHOSEN_USER_ID,
+        )
+
+        repo = UserRepository(driver, database=NEO4J_DATABASE)
+        result = repo.get_connections(CHOSEN_USER_ID)
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+def test_user_repository_get_suggested_connections_no_connection():
+    driver, NEO4J_DATABASE = prepare_neo4j_driver_and_database_name()
+    CHOSEN_USER_ID = np.random.randint(999_999_999)
+
+    with driver:
+        driver.execute_query(
+            """
+                CREATE (c:User {id: $id});
+            """,
+            database_=NEO4J_DATABASE,
+            id=CHOSEN_USER_ID,
+        )
+
+        repo = UserRepository(driver, database=NEO4J_DATABASE)
+        result = repo.get_suggested_connections(CHOSEN_USER_ID)
+        assert isinstance(result, list)
+        assert len(result) == 0
+
 def test_fang_repository_get_global_bias_node_not_exists():
     np.random.seed(120)
     CONFIG_ID = np.random.randint(999_999_999)

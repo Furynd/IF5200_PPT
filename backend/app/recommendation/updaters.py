@@ -1,5 +1,8 @@
+from itertools import product
+
 from backend.app.recommendation.optimizers import FangCollaborativeOptimizer
-from backend.app.repositories import ConfigRepository, UserRepository
+from backend.app.recommendation.scorers import FangVacancyScorer
+from backend.app.repositories import ConfigRepository, UserRepository, VacancyRepository
 
 class FangCollaborativeOptimizerUpdater:
     def __init__(
@@ -38,3 +41,22 @@ class FangCollaborativeOptimizerUpdater:
                 stop = True
             else:
                 user_ids.append(id)
+
+class FangVacancyScorerUpdater:
+    def __init__(
+            self,
+            scorer: FangVacancyScorer,
+            user_repository: UserRepository,
+            vacancy_repository: VacancyRepository
+    ):
+        self.scorer = scorer
+        self.user_repo = user_repository
+        self.vacancy_repo = vacancy_repository
+
+    def update(self):
+        user_id_list = self.user_repo.get_all_user_ids()
+        vacancy_id_list = self.vacancy_repo.get_all_vacancy_ids()
+
+        for user_id, vacancy_id in product(user_id_list, vacancy_id_list):
+            score = self.scorer.get_score(user_id, vacancy_id)
+            self.user_repo.set_vacancy_score(user_id, vacancy_id, score)

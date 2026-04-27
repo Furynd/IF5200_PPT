@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import neo4j
 import numpy as np
 
-from backend.app.repositories import ConfigRepository, FangCollaborativeParameterRepository, UserRepository
+from backend.app.repositories import ConfigRepository, FangCollaborativeParameterRepository, UserRepository, VacancyRepository
 
 def prepare_neo4j_driver_and_database_name():
     load_dotenv()
@@ -427,6 +427,139 @@ def test_user_repository_get_suggested_connections_for_specific_company():
                 id=CHOSEN_COMPANY_ID
             )
 
+def test_user_repository_get_all_user_ids():
+    driver, NEO4J_DATABASE = prepare_neo4j_driver_and_database_name()
+    CHOSEN_USER_ID = np.random.randint(999_999_999)
+    
+    with driver:
+        try:
+            driver.execute_query(
+                """
+                    CREATE (c:User {id: $id});
+                """,
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_USER_ID,
+            )
+            repo = UserRepository(driver, database=NEO4J_DATABASE)
+            result = repo.get_all_user_ids()
+            assert CHOSEN_USER_ID in result
+        finally:
+            driver.execute_query("MATCH (c:User {id: $id}) DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_USER_ID
+            )
+
+def test_user_repository_set_vacancy_score_set_once():
+    driver, NEO4J_DATABASE = prepare_neo4j_driver_and_database_name()
+    CHOSEN_USER_ID = np.random.randint(999_999_999)
+    CHOSEN_VACANCY_ID = np.random.randint(999_999_999)
+    CHOSEN_VACANCY_SCORE = np.random.random() * 5
+    
+    with driver:
+        try:
+            driver.execute_query(
+                """
+                    CREATE (c:User {id: $id});
+                """,
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_USER_ID,
+            )
+            driver.execute_query(
+                """
+                    CREATE (c:Vacancy {id: $id});
+                """,
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_VACANCY_ID,
+            )
+            repo = UserRepository(driver, database=NEO4J_DATABASE)
+            repo.set_vacancy_score(CHOSEN_USER_ID, CHOSEN_VACANCY_ID, CHOSEN_VACANCY_SCORE)
+
+            records, _, _ = driver.execute_query(
+                "MATCH (:Vacancy {id: $vacancy_id})-[s:SUGGESTED_TO]->(:User {id: $user_id}) RETURN s.decided_at AS decided_at, s.score AS score;",
+                vacancy_id=CHOSEN_VACANCY_ID,
+                user_id=CHOSEN_USER_ID,
+            )
+            assert len(records) == 1
+            assert records[0]["decided_at"] is not None
+            assert abs(records[0]["score"] - CHOSEN_VACANCY_SCORE) <= 1e-8
+            
+        finally:
+            driver.execute_query("MATCH (c:User {id: $id}) DETACH DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_USER_ID
+            )
+            driver.execute_query("MATCH (c:Vacancy {id: $id}) DETACH DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_VACANCY_ID
+            )
+
+def test_user_repository_set_vacancy_score_set_twice():
+    driver, NEO4J_DATABASE = prepare_neo4j_driver_and_database_name()
+    CHOSEN_USER_ID = np.random.randint(999_999_999)
+    CHOSEN_VACANCY_ID = np.random.randint(999_999_999)
+    CHOSEN_VACANCY_SCORE = np.random.random() * 5
+    
+    with driver:
+        try:
+            driver.execute_query(
+                """
+                    CREATE (c:User {id: $id});
+                """,
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_USER_ID,
+            )
+            driver.execute_query(
+                """
+                    CREATE (c:Vacancy {id: $id});
+                """,
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_VACANCY_ID,
+            )
+            repo = UserRepository(driver, database=NEO4J_DATABASE)
+            repo.set_vacancy_score(CHOSEN_USER_ID, CHOSEN_VACANCY_ID, np.random.random() * 5)
+            repo.set_vacancy_score(CHOSEN_USER_ID, CHOSEN_VACANCY_ID, CHOSEN_VACANCY_SCORE)
+
+            records, _, _ = driver.execute_query(
+                "MATCH (:Vacancy {id: $vacancy_id})-[s:SUGGESTED_TO]->(:User {id: $user_id}) RETURN s.decided_at AS decided_at, s.score AS score;",
+                vacancy_id=CHOSEN_VACANCY_ID,
+                user_id=CHOSEN_USER_ID,
+            )
+            assert len(records) == 1
+            assert records[0]["decided_at"] is not None
+            assert abs(records[0]["score"] - CHOSEN_VACANCY_SCORE) <= 1e-8
+            
+        finally:
+            driver.execute_query("MATCH (c:User {id: $id}) DETACH DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_USER_ID
+            )
+            driver.execute_query("MATCH (c:Vacancy {id: $id}) DETACH DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_VACANCY_ID
+            )
+
+def test_vacancy_repository_get_all_vacancy_ids():
+    driver, NEO4J_DATABASE = prepare_neo4j_driver_and_database_name()
+    CHOSEN_VACANCY_ID = np.random.randint(999_999_999)
+    
+    with driver:
+        try:
+            driver.execute_query(
+                """
+                    CREATE (c:Vacancy {id: $id});
+                """,
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_VACANCY_ID,
+            )
+            repo = VacancyRepository(driver, database=NEO4J_DATABASE)
+            result = repo.get_all_vacancy_ids()
+            assert CHOSEN_VACANCY_ID in result
+        finally:
+            driver.execute_query("MATCH (c:Vacancy {id: $id}) DELETE c;",
+                database_=NEO4J_DATABASE,
+                id=CHOSEN_VACANCY_ID
+            )
+        
 def test_fang_repository_get_global_bias_node_not_exists():
     np.random.seed(120)
     CONFIG_ID = np.random.randint(999_999_999)

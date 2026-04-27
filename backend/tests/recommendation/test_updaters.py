@@ -1,8 +1,11 @@
+from typing import Any
+
 import numpy as np
 
 from backend.app.recommendation.optimizers import FangCollaborativeOptimizer
-from backend.app.recommendation.updaters import FangCollaborativeOptimizerUpdater
-from backend.app.repositories import ConfigRepository, UserRepository
+from backend.app.recommendation.scorers import FangVacancyScorer
+from backend.app.recommendation.updaters import FangCollaborativeOptimizerUpdater, FangVacancyScorerUpdater
+from backend.app.repositories import ConfigRepository, UserRepository, VacancyRepository
 
 def test_collaborative_optimizer_updater_empty_users():
     class MockUserRepository(UserRepository):
@@ -403,3 +406,64 @@ def test_collaborative_optimizer_updater_two_users_error_same_as_max_when_second
     assert config_repo.error_called_count == 1
     assert config_repo.steps_called_count == 1
     assert optim.get_called_count == 4
+
+def test_vacancy_scorer_updater():
+    np.random.seed(120)
+    N_USERS = 3 + int(np.random.exponential(2))
+    N_VACANCIES = 3 + int(np.random.exponential(2))
+
+    user_id_list: list[int] = []
+    while len(user_id_list) < N_USERS:
+        user_id = np.random.randint(999_999_999)
+        if user_id not in user_id_list:
+            user_id_list.append(user_id)
+
+    vacancy_id_list: list[int] = []
+    while len(vacancy_id_list) < N_VACANCIES:
+        vacancy_id = np.random.randint(999_999_999)
+        if vacancy_id not in vacancy_id_list:
+            vacancy_id_list.append(vacancy_id)
+
+    scores: dict[tuple[int, int], float] = {}
+    for u in user_id_list:
+        for v in vacancy_id_list:
+            scores[(u, v)] = np.random.random() * 5
+    
+    class MockFangVacancyScorer(FangVacancyScorer):
+        def __init__(self):
+            pass
+
+        def get_score(self, user_id, vacancy_id) -> float:
+            return scores[(user_id, vacancy_id)]
+        
+    class MockUserRepository(UserRepository):
+        def __init__(self):
+            self.remaining_tuples = [k for k in scores.keys()]
+
+        def get_all_user_ids(self) -> list[Any]:
+            return user_id_list
+        
+        def set_vacancy_score(self, id, vacancy_id, score: float):
+            key = (id, vacancy_id)
+            assert key in self.remaining_tuples
+            assert score == scores[(id, vacancy_id)]
+            self.remaining_tuples.remove(key)
+        
+    class MockVacancyRepository(VacancyRepository):
+        def __init__(self):
+            pass
+
+        def get_all_vacancy_ids(self) -> list[Any]:
+            return vacancy_id_list
+
+    scorer = MockFangVacancyScorer()
+    user_repo = MockUserRepository()
+    vacancy_repo = MockVacancyRepository()
+    updater = FangVacancyScorerUpdater(
+        scorer=scorer,
+        user_repository=user_repo,
+        vacancy_repository=vacancy_repo
+    )
+    updater.update()
+    assert len(user_repo.remaining_tuples) == 0
+

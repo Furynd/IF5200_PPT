@@ -349,6 +349,10 @@ class FangCollaborativeParameterRepository:
         )
 
 class VacancyRepository:
+    def __init__(self, driver: neo4j.Driver, database: str | None = None):
+        self.driver = driver
+        self.database = database
+
     def get_required_skills(self, id) -> list[int]:
         raise NotImplementedError
     
@@ -357,6 +361,19 @@ class VacancyRepository:
         Returns a tuple <company_id, description, source_url>.
         """
         raise NotImplementedError
+    
+    def get_all_vacancy_ids(self) -> list[Any]:
+        """
+        Return a list of all vacancy IDs.
+        """
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (v:Vacancy)
+                RETURN DISTINCT v.id AS id;
+            """,
+            database_=self.database,
+        )
+        return [r["id"] for r in records]
 
 class UserRepository:
     def __init__(self, driver: neo4j.Driver, database: str | None = None):
@@ -497,7 +514,14 @@ class UserRepository:
         """
         Return a list of user IDs.
         """
-        raise NotImplementedError
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (u:User)
+                RETURN DISTINCT u.id AS id;
+            """,
+            database_=self.database,
+        )
+        return [r["id"] for r in records]
     
     def get_all_similar_skills(
             self,
@@ -527,6 +551,45 @@ class UserRepository:
             (r["id"], float(r["level"]), float(r["sim_score"]))
             for r in records
         ]
+    
+    def set_vacancy_score(self, id, vacancy_id, score: float):
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (:Vacancy {id: $vacancy_id})
+                    -[s:SUGGESTED_TO]->(:User {id: $user_id})
+                RETURN s;
+            """,
+            database_=self.database,
+            vacancy_id=vacancy_id,
+            user_id=id,
+            score=score
+        )
+
+        if len(records) == 0:
+            self.driver.execute_query(
+                """
+                    MATCH (v:Vacancy {id: $vacancy_id})
+                    MATCH (u:User {id: $user_id})
+                    CREATE (v)-[:SUGGESTED_TO {decided_at: datetime(), score: $score}]->(u);
+                """,
+                database_=self.database,
+                vacancy_id=vacancy_id,
+                user_id=id,
+                score=score
+            )
+            return
+        
+        self.driver.execute_query(
+            """
+                MATCH (:Vacancy {id: $vacancy_id})
+                    -[s:SUGGESTED_TO]->(:User {id: $user_id})
+                SET s.decided_at = datetime(), s.score = $score;
+            """,
+            database_=self.database,
+            vacancy_id=vacancy_id,
+            user_id=id,
+            score=score
+        )
 
 class ConfigRepository:
     def __init__(self, driver: neo4j.Driver, config_id, database: str | None = None):

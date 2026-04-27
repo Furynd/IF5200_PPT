@@ -1,4 +1,7 @@
-from backend.app.repositories import UserRepository, VacancyRepository
+try:
+    from backend.app.repositories import UserRepository, VacancyRepository
+except ImportError:  # pragma: no cover - fallback for package-root test execution
+    from app.repositories import UserRepository, VacancyRepository
 
 
 class RecommendationService:
@@ -6,7 +9,7 @@ class RecommendationService:
         self.user_repository = user_repository
         self.vacancy_repository = vacancy_repository
 
-    def get_connections(self, user_id: int):
+    def get_connections(self, user_id: int | str):
         result = []
         for connected_user_id, score in self.user_repository.get_connections(user_id):
             result.append({"user_id": connected_user_id, "score": score})
@@ -14,7 +17,7 @@ class RecommendationService:
 
         return result
     
-    def get_suggested_connections(self, user_id: int):
+    def get_suggested_connections(self, user_id: int | str):
         result = []
         for connected_user_id, score in self.user_repository.get_suggested_connections(user_id):
             result.append({"user_id": connected_user_id, "score": score})
@@ -22,7 +25,7 @@ class RecommendationService:
 
         return result
     
-    def get_vacancies(self, user_id: int):
+    def get_vacancies(self, user_id: int | str):
         result = []
         for vacancy_id, score in self.user_repository.get_vacancies_from_current_companies(user_id):
             company_id, description, source_url = self.vacancy_repository.get_info(vacancy_id)

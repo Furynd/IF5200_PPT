@@ -12,13 +12,14 @@ load_dotenv()
 
 # 2. Import your Base from the schema file
 from app.models.schema import Base
+from app.core.db_url import resolve_database_url
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
 # 3. Override the sqlalchemy.url using your .env variable
-config.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL"))
+config.set_main_option("sqlalchemy.url", resolve_database_url())
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

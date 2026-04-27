@@ -5,15 +5,17 @@ from sqlalchemy.orm import sessionmaker
 from neo4j import GraphDatabase
 import redis
 
+from app.core.db_url import resolve_database_url
+
 # Load environment variables from .env file
 load_dotenv()
 
 # ==========================================
 # 1. POSTGRESQL SETUP (Data Transaksional)
 # ==========================================
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+SQLALCHEMY_DATABASE_URL = resolve_database_url()
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():

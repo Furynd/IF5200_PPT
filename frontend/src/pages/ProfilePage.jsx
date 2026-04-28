@@ -21,6 +21,7 @@ export default function ProfilePage() {
 
   const [cv, setCv] = useState(null)
   const [recentUploads, setRecentUploads] = useState([])
+  const [cvLoading, setCvLoading] = useState(true)
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -30,6 +31,23 @@ export default function ProfilePage() {
       setShortBio(user.short_bio || '')
     }
   }, [user])
+
+  // Fetch existing CV from backend — gracefully handles 404/errors
+  useEffect(() => {
+    setCvLoading(true)
+    api.getUserCV()
+      .then(data => {
+        if (data?.filename) {
+          setRecentUploads([{
+            name: data.filename,
+            size: data.size_mb ? `${data.size_mb} MB` : '',
+            uploaded: data.uploaded_at ? new Date(data.uploaded_at).toLocaleDateString() : 'Previously uploaded',
+          }])
+        }
+      })
+      .catch(() => {})
+      .finally(() => setCvLoading(false))
+  }, [])
 
   const handleSave = async () => {
     setSaving(true)
@@ -64,11 +82,14 @@ export default function ProfilePage() {
     if (file.size > 5 * 1024 * 1024) { setError('CV must be under 5 MB'); return }
     setError('')
     setCv(file)
-    setRecentUploads(prev => [{
+    const entry = {
       name: file.name,
       size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
       uploaded: 'Just now',
-    }, ...prev.slice(0, 2)])
+    }
+    setRecentUploads(prev => [entry, ...prev.slice(0, 2)])
+    // Extract skills from CV in the background
+    api.extractSkillsFromPDF(file).catch(() => {})
     e.target.value = ''
   }
 
@@ -229,8 +250,12 @@ export default function ProfilePage() {
           </div>
         </button>
 
+        {cvLoading && (
+          <div className="mt-4 h-12 bg-gray-100 rounded-lg animate-pulse" />
+        )}
+
         {/* Recent uploads */}
-        {recentUploads.length > 0 && (
+        {!cvLoading && recentUploads.length > 0 && (
           <div className="mt-5">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Recent Uploads</p>
             <div className="space-y-2">

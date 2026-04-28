@@ -1,9 +1,17 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Search, ChevronRight, Briefcase } from 'lucide-react'
+import { Eye, EyeOff, Search, ChevronRight, Briefcase, Upload, FileText, X } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { api } from '../lib/api'
 import CompanyCombobox from '../components/CompanyCombobox'
+import PublicNavbar from '../components/PublicNavbar'
+import PublicFooter from '../components/PublicFooter'
+
+// Step flow:
+//  1 → credentials (name / email / password / phone)
+//  2 → CV upload (required)
+//  3 → employment status (searching / employed)
+//  4 → company verification (only if employed)
 
 function normalizePhone(raw) {
   const digits = raw.replace(/\D/g, '')
@@ -13,40 +21,20 @@ function normalizePhone(raw) {
   return '+' + digits
 }
 
-function PublicNavbar() {
-  return (
-    <header className="bg-white border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        <span className="font-bold text-slate-900 text-xl">Referly</span>
-        <nav className="hidden md:flex items-center gap-8 text-sm text-gray-600">
-          <a href="#" className="hover:text-slate-900">Home</a>
-          <a href="#" className="hover:text-slate-900">About</a>
-          <Link to="/register" className="font-semibold text-slate-900 border-b-2 border-slate-900 pb-0.5">Registration</Link>
-        </nav>
-        <div className="flex items-center gap-3">
-          <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-slate-900">Login</Link>
-          <Link to="/register" className="text-sm font-medium bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors">Sign Up</Link>
-        </div>
-      </div>
-    </header>
-  )
-}
+const TOTAL_STEPS = 4
 
-function PublicFooter() {
+function ProgressDots({ current, total }) {
   return (
-    <footer className="bg-white border-t border-gray-200 py-6">
-      <div className="max-w-7xl mx-auto px-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <span className="font-bold text-slate-900">Referly</span>
-          <p className="text-xs text-gray-400 mt-0.5">© 2026 Referly. All rights reserved.</p>
-        </div>
-        <div className="flex gap-6 text-xs text-gray-500">
-          <a href="#" className="hover:text-slate-700">Privacy Policy</a>
-          <a href="#" className="hover:text-slate-700">Terms of Service</a>
-          <a href="#" className="hover:text-slate-700">Contact</a>
-        </div>
-      </div>
-    </footer>
+    <div className="flex justify-center gap-2 mt-6">
+      {[...Array(total)].map((_, i) => (
+        <div
+          key={i}
+          className={`h-2 rounded-full transition-all ${
+            i + 1 === current ? 'w-8 bg-slate-900' : i + 1 < current ? 'w-4 bg-slate-400' : 'w-4 bg-gray-300'
+          }`}
+        />
+      ))}
+    </div>
   )
 }
 
@@ -54,6 +42,7 @@ export default function RegisterPage() {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState({ full_name: '', email: '', password: '', phone_number: '' })
   const [showPassword, setShowPassword] = useState(false)
+  const [cv, setCv] = useState(null)
   const [employmentStatus, setEmploymentStatus] = useState('')
   const [selectedCompany, setSelectedCompany] = useState(null)
   const [error, setError] = useState('')
@@ -61,33 +50,46 @@ export default function RegisterPage() {
   const [oauthLoading, setOauthLoading] = useState('')
   const { register, loginWithProvider } = useAuth()
   const navigate = useNavigate()
+  const fileInputRef = useRef(null)
 
   const update = (field) => (e) => setForm({ ...form, [field]: e.target.value })
 
-  const validateStep1 = () => {
-    if (form.full_name.trim().length < 2) return 'Full name must be at least 2 characters'
-    if (!/^\S+@\S+\.\S+$/.test(form.email)) return 'Invalid email format'
-    if (form.password.length < 8) return 'Password must be at least 8 characters'
-    const phone = normalizePhone(form.phone_number)
-    if (!/^\+62[0-9]{9,13}$/.test(phone)) return 'Enter a valid Indonesian phone number (e.g. 08123456789)'
-    return null
-  }
+  /* ── Handlers ─────────────────────────────────────────────────────── */
 
   const handleStep1Submit = (e) => {
     e.preventDefault()
-    const err = validateStep1()
-    if (err) { setError(err); return }
+    if (form.full_name.trim().length < 2) { setError('Full name must be at least 2 characters'); return }
+    if (!/^\S+@\S+\.\S+$/.test(form.email)) { setError('Invalid email format'); return }
+    if (form.password.length < 8) { setError('Password must be at least 8 characters'); return }
+    const phone = normalizePhone(form.phone_number)
+    if (!/^\+62[0-9]{9,13}$/.test(phone)) { setError('Enter a valid Indonesian phone number (e.g. 08123456789)'); return }
     setError('')
     setStep(2)
   }
 
+  const handleCvChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const allowed = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+    if (!allowed.includes(file.type)) { setError('CV must be PDF or Word (.doc/.docx)'); e.target.value = ''; return }
+    if (file.size > 5 * 1024 * 1024) { setError('CV must be under 5 MB'); e.target.value = ''; return }
+    setError('')
+    setCv(file)
+  }
+
   const handleStep2Continue = () => {
+    if (!cv) { setError('Please upload your CV before continuing'); return }
+    setError('')
+    setStep(3)
+  }
+
+  const handleStep3Continue = () => {
     if (!employmentStatus) { setError('Please select your employment status'); return }
     setError('')
     if (employmentStatus === 'searching') {
       handleFinalSubmit(null)
     } else {
-      setStep(3)
+      setStep(4)
     }
   }
 
@@ -102,14 +104,9 @@ export default function RegisterPage() {
         phone_number: normalizePhone(form.phone_number),
       })
 
-      if (result?.needsEmailConfirmation) {
-        navigate('/login', {
-          replace: true,
-          state: {
-            message: 'Registration successful. Please verify your email, then log in.',
-          },
-        })
-        return
+      // Extract skills from CV in the background — don't block registration
+      if (cv) {
+        api.extractSkillsFromPDF(cv).catch(() => {})
       }
 
       if (companyId) {
@@ -135,7 +132,7 @@ export default function RegisterPage() {
     }
   }
 
-  const handleStep3Submit = () => {
+  const handleStep4Submit = () => {
     if (!selectedCompany) { setError('Please search and select your company'); return }
     handleFinalSubmit(selectedCompany.id)
   }
@@ -229,14 +226,18 @@ export default function RegisterPage() {
 
               <button type="submit"
                 className="w-full py-2.5 bg-slate-900 text-white rounded-lg font-semibold hover:bg-slate-800 transition-colors">
-                Complete Registration
+                Continue
               </button>
             </form>
 
             <p className="text-center text-xs text-gray-400 mt-3">
               By signing up, you agree to Referly's{' '}
-              <a href="#" className="underline text-gray-600">Terms</a> and{' '}
-              <a href="#" className="underline text-gray-600">Privacy Policy</a>.
+              <Link to="/terms" className="underline text-gray-600">Terms</Link> and{' '}
+              <Link to="/privacy" className="underline text-gray-600">Privacy Policy</Link>.
+            </p>
+            <p className="text-center text-sm text-gray-500 mt-2">
+              Already have an account?{' '}
+              <Link to="/login" className="font-semibold text-slate-900 hover:underline">Log In</Link>
             </p>
           </div>
         </div>
@@ -245,7 +246,7 @@ export default function RegisterPage() {
     </div>
   )
 
-  /* ── Step 2: Employment Status ──────────────────────────────────────── */
+  /* ── Step 2: CV Upload ──────────────────────────────────────────────── */
   if (step === 2) return (
     <div className="min-h-screen flex flex-col bg-gray-100">
       <PublicNavbar />
@@ -255,7 +256,95 @@ export default function RegisterPage() {
             <span className="inline-block text-xs font-semibold text-slate-600 bg-gray-200 px-3 py-1 rounded-full uppercase tracking-widest">
               Step 02
             </span>
-            <h1 className="text-3xl font-bold text-slate-900 mt-3">Registration - Step 02</h1>
+            <h1 className="text-3xl font-bold text-slate-900 mt-3">Upload Your CV</h1>
+            <p className="text-gray-500 mt-2">
+              Help us match you with the right opportunities. Your CV is used to identify your skills and tailor referral suggestions.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-200 p-8">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={handleCvChange}
+              className="hidden"
+            />
+
+            {cv ? (
+              /* File selected state */
+              <div className="space-y-5">
+                <div className="flex items-center gap-4 p-5 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                    <FileText size={22} className="text-emerald-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-emerald-800 truncate">{cv.name}</p>
+                    <p className="text-xs text-emerald-600 mt-0.5">{(cv.size / (1024 * 1024)).toFixed(1)} MB · Ready to upload</p>
+                  </div>
+                  <button
+                    onClick={() => { setCv(null); fileInputRef.current.value = '' }}
+                    className="p-1.5 text-emerald-500 hover:text-red-500 transition-colors flex-shrink-0"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current.click()}
+                  className="w-full py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+                >
+                  Replace file
+                </button>
+              </div>
+            ) : (
+              /* Upload area */
+              <button
+                type="button"
+                onClick={() => fileInputRef.current.click()}
+                className="w-full border-2 border-dashed border-gray-300 rounded-xl p-10 flex flex-col items-center gap-4 hover:border-slate-400 hover:bg-gray-50 transition-colors group"
+              >
+                <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                  <Upload size={24} className="text-blue-500" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-slate-700">Click to upload or drag and drop</p>
+                  <p className="text-sm text-gray-400 mt-1">PDF, DOC, DOCX — max 5 MB</p>
+                </div>
+                <div className="px-5 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg group-hover:bg-slate-800 transition-colors">
+                  Browse Files
+                </div>
+              </button>
+            )}
+
+            {error && <div className="mt-4 bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">{error}</div>}
+
+            <button
+              onClick={handleStep2Continue}
+              className="mt-6 w-full py-2.5 bg-slate-900 text-white rounded-lg font-semibold hover:bg-slate-800 transition-colors"
+            >
+              Continue
+            </button>
+          </div>
+
+          <ProgressDots current={2} total={TOTAL_STEPS} />
+        </div>
+      </div>
+      <PublicFooter />
+    </div>
+  )
+
+  /* ── Step 3: Employment Status ──────────────────────────────────────── */
+  if (step === 3) return (
+    <div className="min-h-screen flex flex-col bg-gray-100">
+      <PublicNavbar />
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+        <div className="w-full max-w-lg">
+          <div className="mb-6">
+            <span className="inline-block text-xs font-semibold text-slate-600 bg-gray-200 px-3 py-1 rounded-full uppercase tracking-widest">
+              Step 03
+            </span>
+            <h1 className="text-3xl font-bold text-slate-900 mt-3">Registration - Step 03</h1>
             <p className="text-gray-500 mt-2">
               Help us personalize your experience by defining your current professional standing.
             </p>
@@ -310,7 +399,7 @@ export default function RegisterPage() {
             {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg mb-4">{error}</div>}
 
             <button
-              onClick={handleStep2Continue}
+              onClick={handleStep3Continue}
               disabled={loading}
               className="w-full py-2.5 bg-slate-900 text-white rounded-lg font-semibold hover:bg-slate-800 disabled:opacity-50 transition-colors"
             >
@@ -328,20 +417,22 @@ export default function RegisterPage() {
               Join 12,000+ professionals currently navigating their careers through Referly's curated networks.
             </p>
           </div>
+
+          <ProgressDots current={3} total={TOTAL_STEPS} />
         </div>
       </div>
       <PublicFooter />
     </div>
   )
 
-  /* ── Step 3: Employment Verification ────────────────────────────────── */
+  /* ── Step 4: Employment Verification ────────────────────────────────── */
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
       <PublicNavbar />
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-lg">
           <div className="flex items-center gap-2 text-xs text-gray-400 font-semibold uppercase tracking-wider mb-6">
-            <span className="text-gray-600">Step 03</span>
+            <span className="text-gray-600">Step 04</span>
             <span>—</span>
             <span className="text-gray-600">Verification</span>
           </div>
@@ -363,7 +454,7 @@ export default function RegisterPage() {
             {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg mb-4">{error}</div>}
 
             <button
-              onClick={handleStep3Submit}
+              onClick={handleStep4Submit}
               disabled={loading}
               className="w-full py-2.5 bg-slate-900 text-white rounded-lg font-semibold hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
             >
@@ -371,11 +462,7 @@ export default function RegisterPage() {
             </button>
           </div>
 
-          <div className="flex justify-center gap-2 mt-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className={`h-2 rounded-full transition-all ${i === 3 ? 'w-8 bg-slate-900' : 'w-4 bg-gray-300'}`} />
-            ))}
-          </div>
+          <ProgressDots current={4} total={TOTAL_STEPS} />
         </div>
       </div>
       <PublicFooter />

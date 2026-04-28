@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 try:
     from backend.app.repositories import UserRepository, VacancyRepository
 except ImportError:  # pragma: no cover - fallback for package-root test execution

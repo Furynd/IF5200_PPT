@@ -87,6 +87,18 @@ export const api = {
   getConnectionsAtCompany: (companyId, maxHops = 2) =>
     request(`/connections/at-company/${companyId}?max_hops=${maxHops}`),
 
+  // Recommendations
+  getRecommendationConnections: (userId) =>
+    request(`/recommendations/${userId}/connections`),
+  getSuggestedRecommendations: (userId) =>
+    request(`/recommendations/${userId}/suggested-connections`),
+  getRecommendationVacanciesFromTarget: (userId, targetUserId) =>
+    request(`/recommendations/${userId}/vacancies/from-target/${targetUserId}`),
+  getRecommendationConnectionsFromCompany: (userId, companyId) =>
+    request(`/recommendations/${userId}/connections/from-company/${companyId}`),
+  getSuggestedRecommendationsFromCompany: (userId, companyId) =>
+    request(`/recommendations/${userId}/suggested-connections/from-company/${companyId}`),
+
   // CV
   uploadCV: (file) => uploadFile('/cv/upload', file),
   getUserCV: () => request('/cv/user').catch(() => null),

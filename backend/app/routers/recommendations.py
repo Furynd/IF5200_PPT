@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import os
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.database import neo4j_driver
 from app.recommendation.neo4j_repositories import Neo4jUserRepository, Neo4jVacancyRepository
@@ -78,7 +80,7 @@ def get_connections(
     user_id: str,
     service: RecommendationService = Depends(get_recommendation_service),
 ):
-    return service.get_connections(user_id)
+    return {"connections": service.get_connections(user_id)}
 
 
 @router.get("/{user_id}/suggested-connections")
@@ -86,12 +88,31 @@ def get_suggested_connections(
     user_id: str,
     service: RecommendationService = Depends(get_recommendation_service),
 ):
-    return service.get_suggested_connections(user_id)
+    return {"connections": service.get_suggested_connections(user_id)}
 
 
-@router.get("/{user_id}/vacancies")
-def get_vacancies(
+@router.get("/{user_id}/vacancies/from-target/{target_user_id}")
+def get_vacancies_from_target(
     user_id: str,
+    target_user_id: str,
     service: RecommendationService = Depends(get_recommendation_service),
 ):
-    return service.get_vacancies(user_id)
+    return {"vacancies": service.get_vacancies_from_target(user_id, target_user_id)}
+
+
+@router.get("/{user_id}/connections/from-company/{company_id}")
+def get_connections_from_specific_company(
+    user_id: str,
+    company_id: str,
+    service: RecommendationService = Depends(get_recommendation_service),
+):
+    return {"connections": service.get_connections_from_specific_company(user_id, company_id)}
+
+
+@router.get("/{user_id}/suggested-connections/from-company/{company_id}")
+def get_suggested_connections_from_specific_company(
+    user_id: str,
+    company_id: str,
+    service: RecommendationService = Depends(get_recommendation_service),
+):
+    return {"connections": service.get_suggested_connections_from_specific_company(user_id, company_id)}

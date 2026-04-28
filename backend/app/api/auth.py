@@ -1,7 +1,6 @@
 import os
 import uuid
 import jwt
-import logging
 import hashlib
 import hmac
 from datetime import datetime, timedelta
@@ -13,10 +12,9 @@ from app.core.database import get_db
 from app.db.neo4j import get_neo4j_driver
 from app.core.security import get_current_user_id
 from app.models.schema import User
-from app.services.user_graph import create_user_node
+from app.user_profile_repositories import UserProfileSyncRepository
 
 router = APIRouter(prefix="/auth", tags=["Autentikasi & Profil"])
-logger = logging.getLogger(__name__)
 
 
 class DevLoginRequest(BaseModel):
@@ -122,27 +120,15 @@ async def dev_register(
     # 3. Buat UUID acak (meniru ID yang biasanya di-generate oleh Supabase Auth)
     new_uuid = str(uuid.uuid4())
 
-    # 4. Simpan ke database PostgreSQL lokal
-    new_user = User(
-        id=new_uuid,
+    # 4. Simpan ke PostgreSQL + sinkronkan Neo4j
+    sync_repo = UserProfileSyncRepository(db, driver)
+    new_user = await sync_repo.upsert_from_auth(
+        user_id=new_uuid,
         email=request_data.email,
-        password_hash=_hash_password(request_data.password),
         full_name=_clean_optional_text(request_data.full_name),
         phone_number=_clean_optional_text(request_data.phone_number),
+        password_hash=_hash_password(request_data.password),
     )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    try:
-        await create_user_node(
-            driver,
-            user_id=new_uuid,
-            full_name=new_user.full_name or "",
-            phone_number=new_user.phone_number or "",
-        )
-    except Exception as exc:
-        logger.warning("Neo4j user node sync failed for %s: %s", new_uuid, exc)
 
     # 5. Terbitkan (Mint) JWT
     token_payload = {
@@ -170,39 +156,27 @@ class UserSyncRequest(BaseModel):
     phone_number: str | None = None
 
 @router.post("/sync")
-def sync_user_profile(
+async def sync_user_profile(
     user_data: UserSyncRequest, 
     db: Session = Depends(get_db), 
+    driver = Depends(get_neo4j_driver),
     user_id: str = Depends(get_current_user_id)
 ):
     """
     Menyimpan profil user ke database lokal setelah berhasil login.
     """
-    user = db.query(User).filter(User.id == user_id).first()
-    
-    if not user:
-        new_user = User(
-            id=user_id,
-            email=user_data.email,
-            full_name=_clean_optional_text(user_data.full_name),
-            phone_number=_clean_optional_text(user_data.phone_number),
-        )
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-        return {"message": "Profil lokal berhasil dibuat", "user": _public_user(new_user)}
+    sync_repo = UserProfileSyncRepository(db, driver)
+    existing_user = db.query(User).filter(User.id == user_id).first()
 
-    if user_data.full_name is not None:
-        user.full_name = _clean_optional_text(user_data.full_name)
-    if user_data.phone_number is not None:
-        user.phone_number = _clean_optional_text(user_data.phone_number)
-    if user.email != user_data.email:
-        user.email = user_data.email
+    user = await sync_repo.upsert_from_auth(
+        user_id=user_id,
+        email=user_data.email,
+        full_name=_clean_optional_text(user_data.full_name),
+        phone_number=_clean_optional_text(user_data.phone_number),
+    )
 
-    db.commit()
-    db.refresh(user)
-        
-    return {"message": "Profil lokal sudah ada", "user": _public_user(user)}
+    message = "Profil lokal berhasil dibuat" if existing_user is None else "Profil lokal sudah ada"
+    return {"message": message, "user": _public_user(user)}
 
 @router.get("/me")
 def get_my_profile(

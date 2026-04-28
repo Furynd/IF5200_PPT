@@ -63,12 +63,12 @@ class FangVacancyScorer:
         total_score = 0.0
         skill_count = 0
 
-        if skill_count == 0:
-            return 0.0
-
         for skill_id in self.repository.get_required_skills(vacancy_id):
             score = self.child_scorer.get_score(user_id, skill_id)
             total_score += score
             skill_count += 1
+
+        if skill_count == 0:
+            return 0.0
         
         return total_score / skill_count

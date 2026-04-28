@@ -155,6 +155,8 @@ def rank_connections(seeker: dict, connections: list[dict]) -> list[dict]:
         ranked.append({
             "user": {"id": conn["id"], "full_name": conn["full_name"]},
             "job_title": conn["job_title"],
+            "company_id": conn.get("company_id"),
+            "company_name": conn.get("company_name"),
             "hops": conn["hops"],
             "path_via": conn["path_via"],
             "is_open_to_refer": conn["is_open_to_refer"],

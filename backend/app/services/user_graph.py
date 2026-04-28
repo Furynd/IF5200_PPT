@@ -147,3 +147,25 @@ async def get_user_with_company(driver: AsyncDriver, user_id: str) -> dict | Non
             "company": record["company"],  # May be None
             "job_title": record["job_title"],
         }
+
+
+async def create_connection(
+    driver: AsyncDriver,
+    user_id: str,
+    target_user_id: str,
+) -> bool:
+    """
+    Create a CONNECTED_TO relationship between two users.
+    Idempotent: if the relationship already exists, it's a no-op.
+    Returns True if successful, False if either user doesn't exist.
+    """
+    query = """
+    MATCH (u1:User {id: $user_id})
+    MATCH (u2:User {id: $target_user_id})
+    MERGE (u1)-[:CONNECTED_TO]-(u2)
+    RETURN true
+    """
+    async with driver.session() as session:
+        result = await session.run(query, user_id=user_id, target_user_id=target_user_id)
+        record = await result.single()
+        return record is not None

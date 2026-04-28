@@ -84,6 +84,8 @@ export const api = {
     request('/contacts/sync', { method: 'POST', body: JSON.stringify({ hashes }) }),
   getConnections: (maxHops = 2) =>
     request(`/connections?max_hops=${maxHops}`),
+  addConnection: (targetUserId) =>
+    request('/connections', { method: 'POST', body: JSON.stringify({ target_user_id: targetUserId }) }),
   getConnectionsAtCompany: (companyId, maxHops = 2) =>
     request(`/connections/at-company/${companyId}?max_hops=${maxHops}`),
 

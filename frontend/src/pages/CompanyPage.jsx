@@ -1,13 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Building2, Users, Send, ArrowLeft, Loader2, AlertCircle, UserCheck, UserX } from 'lucide-react'
 import { api } from '../lib/api'
 import ReferralRequestModal from '../components/ReferralRequestModal'
+import { useAuth } from '../lib/auth'
 
 export default function CompanyPage() {
+  const { user } = useAuth()
   const { id } = useParams()
   const [company, setCompany] = useState(null)
   const [connections, setConnections] = useState([])
+  const [directRecommendationScores, setDirectRecommendationScores] = useState({})
+  const [suggestedRecommendationScores, setSuggestedRecommendationScores] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [referralSuccess, setReferralSuccess] = useState('')
@@ -36,6 +40,41 @@ export default function CompanyPage() {
 
     return () => { cancelled = true }
   }, [id])
+
+  useEffect(() => {
+    if (!user?.id || !id) return
+
+    let cancelled = false
+
+    Promise.all([
+      api.getRecommendationConnectionsFromCompany(user.id, id),
+      api.getSuggestedRecommendationsFromCompany(user.id, id),
+    ])
+      .then(([directData, suggestedData]) => {
+        if (cancelled) return
+
+        const directScores = {}
+        ;(directData.connections || []).forEach((item) => {
+          directScores[item.user_id] = item.score
+        })
+
+        const suggestedScores = {}
+        ;(suggestedData.connections || []).forEach((item) => {
+          suggestedScores[item.user_id] = item.score
+        })
+
+        setDirectRecommendationScores(directScores)
+        setSuggestedRecommendationScores(suggestedScores)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDirectRecommendationScores({})
+          setSuggestedRecommendationScores({})
+        }
+      })
+
+    return () => { cancelled = true }
+  }, [user?.id, id])
 
   if (loading) {
     return (
@@ -99,6 +138,7 @@ export default function CompanyPage() {
               title="Koneksi Langsung"
               subtitle="Orang yang kamu kenal secara langsung"
               connections={directConnections}
+              scoreMap={directRecommendationScores}
               companyId={company.id}
               companyName={company.name}
               onRequestReferral={setSelectedConnection}
@@ -109,6 +149,7 @@ export default function CompanyPage() {
               title="Koneksi Tidak Langsung"
               subtitle="Bisa dijangkau melalui satu teman perantara"
               connections={secondDegreeConnections}
+              scoreMap={suggestedRecommendationScores}
               companyId={company.id}
               companyName={company.name}
               onRequestReferral={setSelectedConnection}
@@ -129,7 +170,11 @@ export default function CompanyPage() {
   )
 }
 
-function ConnectionList({ title, subtitle, connections, companyId, companyName, onRequestReferral }) {
+function ConnectionList({ title, subtitle, connections, scoreMap, companyId, companyName, onRequestReferral }) {
+  const rankedConnections = useMemo(() => {
+    return [...connections].sort((a, b) => (scoreMap?.[b.user.id] ?? 0) - (scoreMap?.[a.user.id] ?? 0))
+  }, [connections, scoreMap])
+
   return (
     <div className="bg-white rounded-xl border border-surface-200 p-6">
       <div className="mb-4">
@@ -140,10 +185,11 @@ function ConnectionList({ title, subtitle, connections, companyId, companyName, 
         <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
       </div>
       <ul className="divide-y divide-surface-200 -mx-6">
-        {connections.map(conn => (
+        {rankedConnections.map(conn => (
           <ConnectionItem
             key={conn.user.id}
             conn={conn}
+            recommendationScore={scoreMap?.[conn.user.id]}
             companyId={companyId}
             companyName={companyName}
             onRequestReferral={onRequestReferral}
@@ -154,7 +200,7 @@ function ConnectionList({ title, subtitle, connections, companyId, companyName, 
   )
 }
 
-function ConnectionItem({ conn, companyId, companyName, onRequestReferral }) {
+function ConnectionItem({ conn, recommendationScore, companyId, companyName, onRequestReferral }) {
   const { user, job_title, hops, path_via, is_open_to_refer } = conn
 
   return (
@@ -166,6 +212,11 @@ function ConnectionItem({ conn, companyId, companyName, onRequestReferral }) {
             <span className="text-xs bg-primary-50 text-primary-700 px-2 py-0.5 rounded-full flex-shrink-0">Langsung</span>
           ) : (
             <span className="text-xs bg-surface-100 text-gray-600 px-2 py-0.5 rounded-full flex-shrink-0">2 hop</span>
+          )}
+          {typeof recommendationScore === 'number' && (
+            <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full flex-shrink-0">
+              {recommendationScore.toFixed(2)}
+            </span>
           )}
         </div>
         {job_title && <p className="text-sm text-gray-500 truncate">{job_title}</p>}

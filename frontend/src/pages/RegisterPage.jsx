@@ -48,7 +48,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState('')
-  const { register, loginWithProvider } = useAuth()
+  const { register, loginWithProvider, setUser } = useAuth()
   const navigate = useNavigate()
   const fileInputRef = useRef(null)
 
@@ -97,12 +97,22 @@ export default function RegisterPage() {
     setLoading(true)
     setError('')
     try {
-      const result = await register({
+      await register({
         full_name: form.full_name.trim(),
         email: form.email.trim().toLowerCase(),
         password: form.password,
         phone_number: normalizePhone(form.phone_number),
       })
+
+      if (cv) {
+        const uploadedCv = await api.uploadCV(cv)
+        const profile = await api.getProfile()
+        setUser({
+          ...profile,
+          cv_filename: uploadedCv?.filename ?? profile?.cv_filename ?? null,
+          cv_url: uploadedCv?.url ?? profile?.cv_url ?? null,
+        })
+      }
 
       // Extract skills from CV in the background — don't block registration
       if (cv) {
@@ -110,8 +120,10 @@ export default function RegisterPage() {
       }
 
       if (companyId) {
-        await api.updateProfile({ company_id: companyId })
+        const updatedProfile = await api.updateProfile({ company_id: companyId })
+        setUser(updatedProfile)
       }
+
       navigate('/profile?welcome=1', { replace: true })
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.')

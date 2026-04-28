@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Search, Plus, MapPin, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
-import ContactSyncModal from '../components/ContactSyncModal'
+import { useAuth } from '../lib/auth'
 
 const PAGE_SIZE = 6
 
@@ -25,22 +25,28 @@ function ConnectionCard({ conn }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
       <div className="flex items-start gap-3">
-        <div className="relative">
-          <Avatar name={conn.user.full_name} />
-          <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${isOnline ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold text-slate-900 truncate">{conn.user.full_name}</p>
-          <p className="text-xs text-gray-500 truncate mt-0.5">
-            {[conn.job_title, conn.company_name].filter(Boolean).join(' at ')}
-          </p>
-          {conn.hops === 2 && conn.path_via?.length > 0 && (
-            <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
-              <MapPin size={10} />
-              via {conn.path_via[0]}
+        <Link
+          to={`/network/${conn.user.id}`}
+          state={{ connection: conn }}
+          className="flex items-start gap-3 min-w-0 flex-1 group"
+        >
+          <div className="relative flex-shrink-0">
+            <Avatar name={conn.user.full_name} />
+            <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${isOnline ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-slate-900 truncate group-hover:text-primary-700 transition-colors">{conn.user.full_name}</p>
+            <p className="text-xs text-gray-500 truncate mt-0.5">
+              {[conn.job_title, conn.company_name].filter(Boolean).join(' at ')}
             </p>
-          )}
-        </div>
+            {conn.hops === 2 && conn.path_via?.length > 0 && (
+              <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                <MapPin size={10} />
+                via {conn.path_via[0]}
+              </p>
+            )}
+          </div>
+        </Link>
       </div>
 
       {/* Mutual connection avatars */}
@@ -78,21 +84,120 @@ function ConnectionCard({ conn }) {
   )
 }
 
-function AddConnectionModal({ open, onClose }) {
+function RecommendationCard({ item }) {
+  const connection = item.connection
+  const score = item.score
+
+  return (
+    <Link
+      to={`/network/${connection?.user?.id || item.user_id}`}
+      state={{ connection, recommendation: item }}
+      className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow block"
+    >
+      <div className="flex items-start gap-3">
+        <Avatar name={connection?.user?.full_name || item.user_id} size="sm" />
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-slate-900 truncate">
+            {connection?.user?.full_name || item.user_id}
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5 truncate">
+            {connection?.job_title || 'Recommended connection'}
+          </p>
+        </div>
+        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+          {typeof score === 'number' ? score.toFixed(2) : 'N/A'}
+        </span>
+      </div>
+      {connection?.company_name && (
+        <p className="mt-3 text-xs text-gray-500 truncate">
+          {connection.company_name}
+        </p>
+      )}
+    </Link>
+  )
+}
+
+function AddConnectionModal({ open, onClose, directRecommendations, suggestedRecommendations }) {
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-lg">
-        <ContactSyncModal open={true} onClose={onClose} onSuccess={() => {}} />
+      <div className="relative z-10 w-full max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+        <div className="flex items-center justify-between gap-4 px-6 py-5 border-b border-slate-200">
+          <div>
+            <h3 className="text-xl font-bold text-slate-900">Add New Connection</h3>
+            <p className="text-sm text-slate-500 mt-1">Recommended people and connection tools live here now.</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50"
+            aria-label="Close add connection modal"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h4 className="text-base font-bold text-slate-900">Direct Recommendations</h4>
+                <p className="text-sm text-slate-600">People paling relevan dari graph rekomendasi baru.</p>
+              </div>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 border border-slate-200">
+                {directRecommendations.length} hasil
+              </span>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {directRecommendations.map((item) => (
+                <RecommendationCard key={item.user_id} item={item} />
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h4 className="text-base font-bold text-slate-900">Suggested Connections</h4>
+                <p className="text-sm text-slate-500">Koneksi 2-hop yang juga masuk prioritas rekomendasi.</p>
+              </div>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                {suggestedRecommendations.length} hasil
+              </span>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {suggestedRecommendations.map((item) => (
+                <RecommendationCard key={item.user_id} item={item} />
+              ))}
+            </div>
+          </section>
+
+          {/* <section className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
+            <h4 className="text-base font-bold text-slate-900">Contact Sync</h4>
+            <p className="text-sm text-slate-500 mt-1">
+              Contact sync is disabled for now while this modal is used for recommendations.
+            </p>
+            <button
+              type="button"
+              disabled
+              className="mt-4 inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-400 cursor-not-allowed"
+            >
+              Disabled
+            </button>
+          </section> */}
+        </div>
       </div>
     </div>
   )
 }
 
 export default function HomePage() {
+  const { user } = useAuth()
   const [connections, setConnections] = useState([])
+  const [recommendedConnections, setRecommendedConnections] = useState([])
+  const [suggestedConnections, setSuggestedConnections] = useState([])
   const [loading, setLoading] = useState(true)
+  const [recommendationLoading, setRecommendationLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [filterHops, setFilterHops] = useState('all')
   const [page, setPage] = useState(1)
@@ -106,6 +211,58 @@ export default function HomePage() {
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [])
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    let cancelled = false
+    setRecommendationLoading(true)
+
+    Promise.all([
+      api.getRecommendationConnections(user.id),
+      api.getSuggestedRecommendations(user.id),
+    ])
+      .then(([directData, suggestedData]) => {
+        if (cancelled) return
+        setRecommendedConnections(directData.connections || [])
+        setSuggestedConnections(suggestedData.connections || [])
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRecommendedConnections([])
+          setSuggestedConnections([])
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setRecommendationLoading(false)
+      })
+
+    return () => { cancelled = true }
+  }, [user?.id])
+
+  const connectionByUserId = useMemo(() => {
+    const map = new Map()
+    connections.forEach((connection) => {
+      map.set(connection.user.id, connection)
+    })
+    return map
+  }, [connections])
+
+  const recommendationCards = useMemo(() => {
+    const direct = recommendedConnections.map((item) => ({
+      ...item,
+      connection: connectionByUserId.get(item.user_id) || null,
+    }))
+    const suggested = suggestedConnections.map((item) => ({
+      ...item,
+      connection: connectionByUserId.get(item.user_id) || null,
+    }))
+
+    return {
+      direct: direct.filter((item) => item.connection || item.user_id),
+      suggested: suggested.filter((item) => item.connection || item.user_id),
+    }
+  }, [connectionByUserId, recommendedConnections, suggestedConnections])
 
   const filtered = useMemo(() => {
     let list = connections
@@ -242,13 +399,11 @@ export default function HomePage() {
         </>
       )}
 
-      <ContactSyncModal
+      <AddConnectionModal
         open={syncOpen}
         onClose={() => setSyncOpen(false)}
-        onSuccess={(result) => {
-          setSyncOpen(false)
-          api.getConnections().then(d => setConnections(d.connections || [])).catch(() => {})
-        }}
+        directRecommendations={recommendationCards.direct.slice(0, 6)}
+        suggestedRecommendations={recommendationCards.suggested.slice(0, 6)}
       />
     </div>
   )

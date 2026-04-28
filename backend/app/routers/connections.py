@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from neo4j import AsyncDriver
 
 from app.db.neo4j import get_neo4j_driver
-from app.services import recommendation, company_graph
+from app.services import recommendation, company_graph, user_graph
 
 router = APIRouter()
 
@@ -80,3 +80,20 @@ async def _fetch_both(driver, user_id, company_id, max_hops, seeker):
     )
     ranked = recommendation.rank_connections(seeker, raw)
     return co, ranked
+
+
+class AddConnectionRequest(BaseModel):
+    target_user_id: str
+
+
+@router.post("/connections")
+async def add_connection(
+    request: AddConnectionRequest,
+    user_id: str = Query(default=DEMO_USER_ID),
+    driver: AsyncDriver = Depends(get_neo4j_driver),
+):
+    """Create a CONNECTED_TO relationship between two users."""
+    success = await user_graph.create_connection(driver, user_id, request.target_user_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="User or target user not found")
+    return {"status": "ok", "message": "Connection created"}

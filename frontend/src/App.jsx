@@ -9,6 +9,7 @@ import TermsPage from './pages/TermsPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import HomePage from './pages/HomePage'
+import ConnectionPage from './pages/ConnectionPage'
 import SearchPage from './pages/SearchPage'
 import CompanyPage from './pages/CompanyPage'
 import ProfilePage from './pages/ProfilePage'
@@ -35,6 +36,7 @@ export default function App() {
           </ProtectedRoute>
         }>
           <Route path="/network" element={<HomePage />} />
+          <Route path="/network/:userId" element={<ConnectionPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/company/:id" element={<CompanyPage />} />
           <Route path="/profile" element={<ProfilePage />} />

@@ -1,4 +1,7 @@
 import os
+import random
+import sys
+import time
 
 from dotenv import load_dotenv
 import neo4j
@@ -35,10 +38,43 @@ def init():
     scorer_updater = FangVacancyScorerUpdater(vacancy_scorer, user_repo, vacancy_repo)
 
     optimizer = FangCollaborativeOptimizer(fang_repo, user_repo, config_repo)
-    optimizer_updater = FangCollaborativeOptimizerUpdater(user_repo, config_repo, optimizer)
+    optimizer_updater = FangCollaborativeOptimizerUpdater(user_repo, config_repo, optimizer, shuffle=True)
 
     return (
         service,           # Ini hubungkan ke API
         scorer_updater,    # Ini jalankan di background untuk interval fixed (misalkan per 1 menit)
         optimizer_updater, # Ini juga jalankan di background untuk interval fixed
     )
+
+if __name__ == "__main__":
+    print("Initializing ....")
+    random.seed(120)
+    _, scorer_updater, optimizer_updater = init()
+    print("Initialized! (Ctrl+C to exit)")
+
+    optimizer_only = "optimizer_only" in sys.argv
+    scorer_only = "scorer_only" in sys.argv
+    
+    stop = False
+    while not stop:
+        try:
+            if not optimizer_only:
+                print("Score update ....")
+                start_time = time.time()
+                scorer_updater.update()
+                print(f"(Duration: {time.time() - start_time} s)")
+                print("Wait 10 seconds ....")
+                time.sleep(10)
+
+            if not scorer_only:
+                print("Optimization update ....")
+                start_time = time.time()
+                optimizer_updater.update()
+                print(f"(Duration: {time.time() - start_time} s)")
+                print("Wait 10 seconds ....")
+                time.sleep(10)
+            
+            print("---")
+        except KeyboardInterrupt:
+            print("Interruption detected.")
+            stop = True

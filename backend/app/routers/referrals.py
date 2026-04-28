@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -9,7 +9,6 @@ from app.services.referral_delivery import (
     build_referral_message,
     normalize_phone_number,
     send_fonnte_message,
-    upload_cv_to_supabase,
 )
 
 router = APIRouter()
@@ -29,7 +28,6 @@ def send_referral(
     company_id: str = Form(...),
     referee_user_id: str = Form(...),
     message: str | None = Form(default=None),
-    cv_file: UploadFile = File(...),
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
@@ -52,12 +50,12 @@ def send_referral(
     if not normalized_phone:
         raise HTTPException(status_code=400, detail="Referee phone number is not available")
 
-    cv_path, cv_url = upload_cv_to_supabase(
-        cv_file,
-        requester_id=requester.id,
-        referee_id=referee.id,
-        company_id=company.id,
-    )
+    cv_url = (requester.cv_url or "").strip()
+    if not cv_url:
+        raise HTTPException(
+            status_code=400,
+            detail="CV belum diunggah di profil. Silakan upload CV di halaman profile terlebih dahulu.",
+        )
 
     referral_message = build_referral_message(
         requester_name=requester.full_name or requester.email,

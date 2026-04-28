@@ -1,3 +1,42 @@
+## Setup Singkat
+
+Backend:
+
+1. Copy `backend/.env.example` ke `backend/.env`.
+2. Isi minimal `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `FONNTE_API_KEY`, dan konfigurasi database.
+3. Jalankan backend dari folder `backend/` sesuai environment yang dipakai project ini.
+
+Frontend:
+
+1. Masuk ke folder `frontend/`.
+2. Install dependency jika perlu.
+3. Jalankan `npm run build` untuk memastikan aplikasi React berhasil dikompilasi.
+
+## Testing
+
+- Backend tests: jalankan `pytest` dari root repository atau dari folder `backend/` setelah dependency tersedia.
+- Frontend check: jalankan `npm run build` dari folder `frontend/`.
+- Referral unit test yang ditambahkan bisa dijalankan dengan `pytest backend/tests/test_referral_delivery.py -q`.
+- Beberapa test backend lama masih memerlukan Neo4j yang bisa di-resolve dari environment dan akan gagal jika service itu belum tersedia.
+
+## Database migration for CV field
+
+The code adds new columns to the `users` table to store CV metadata (`cv_filename`, `cv_url`, `cv_uploaded_at`). After pulling these changes, run the alembic migration from the `backend/` folder:
+
+```bash
+cd backend
+alembic upgrade head
+```
+
+If you use the Docker compose setup, you can run migrations in the API container or run alembic locally against your database URL.
+
+## Referral Flow
+
+Referral sekarang memakai CV yang sudah diupload di halaman Profile (tersimpan di Supabase Storage dan metadata di tabel `users`), lalu mengirim pesan WhatsApp lewat Fonnte free berisi link CV tersebut.
+
+
+------------------------------------------------------------------------------------------
+
 feat: enhance authentication with Supabase integration and OAuth support
 
 - Updated backend to support JWT decoding with both HS256 and JWKS methods.

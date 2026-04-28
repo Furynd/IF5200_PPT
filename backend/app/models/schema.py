@@ -23,6 +23,9 @@ class User(Base):
     is_open_to_refer = Column(Boolean, default=True) # Sesuai fitur kontrol privasi
     referral_quota = Column(Integer, default=5)
     created_at = Column(DateTime, default=datetime.utcnow)
+    cv_filename = Column(String, nullable=True)
+    cv_url = Column(String, nullable=True)
+    cv_uploaded_at = Column(DateTime, nullable=True)
 
 class Company(Base):
     __tablename__ = "companies"

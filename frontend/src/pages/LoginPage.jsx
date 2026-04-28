@@ -15,6 +15,7 @@ export default function LoginPage() {
   const { user, loading: authLoading, login, loginWithProvider } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const infoMessage = location.state?.message || ''
   const from = location.state?.from?.pathname || '/network'
 
   useEffect(() => {

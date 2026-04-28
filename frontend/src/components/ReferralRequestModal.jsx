@@ -1,16 +1,8 @@
 import { useState } from 'react'
-import { X, Upload, FileText, Loader2, Send } from 'lucide-react'
+import { X, Loader2, Send } from 'lucide-react'
 import { api } from '../lib/api'
 
-const ALLOWED_TYPES = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-]
-const MAX_FILE_SIZE = 10 * 1024 * 1024
-
 export default function ReferralRequestModal({ open, company, connection, onClose, onSuccess }) {
-  const [cvFile, setCvFile] = useState(null)
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -18,7 +10,6 @@ export default function ReferralRequestModal({ open, company, connection, onClos
   if (!open || !company || !connection) return null
 
   const reset = () => {
-    setCvFile(null)
     setMessage('')
     setLoading(false)
     setError('')
@@ -33,25 +24,9 @@ export default function ReferralRequestModal({ open, company, connection, onClos
     event.preventDefault()
     setError('')
 
-    if (!cvFile) {
-      setError('Upload CV terlebih dahulu.')
-      return
-    }
-
-    if (!ALLOWED_TYPES.includes(cvFile.type)) {
-      setError('CV harus PDF, DOC, atau DOCX.')
-      return
-    }
-
-    if (cvFile.size > MAX_FILE_SIZE) {
-      setError('Ukuran CV maksimal 10 MB.')
-      return
-    }
-
     const formData = new FormData()
     formData.append('company_id', company.id)
     formData.append('referee_user_id', connection.user.id)
-    formData.append('cv_file', cvFile)
     formData.append('message', message.trim())
 
     try {
@@ -90,33 +65,8 @@ export default function ReferralRequestModal({ open, company, connection, onClos
         <form onSubmit={handleSubmit} className="space-y-4 px-5 py-5">
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
             {connection.is_open_to_refer
-              ? 'Koneksi ini terbuka untuk referral. Pesan akan dikirim via Fonnte free dengan link CV dari Supabase Storage.'
+              ? 'Koneksi ini terbuka untuk referral. Pesan akan dikirim via Fonnte free menggunakan CV dari profil kamu.'
               : 'Koneksi ini tidak sedang membuka referral.'}
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">CV</label>
-            <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 px-4 py-6 text-center hover:border-slate-400 hover:bg-slate-50">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-white">
-                <Upload size={18} />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-700">Klik untuk upload CV</p>
-                <p className="mt-1 text-xs text-slate-400">PDF, DOC, atau DOCX. Maks 10 MB.</p>
-              </div>
-              <input
-                type="file"
-                accept=".pdf,.doc,.docx"
-                onChange={(e) => setCvFile(e.target.files?.[0] || null)}
-                className="hidden"
-              />
-            </label>
-            {cvFile && (
-              <div className="mt-2 flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
-                <FileText size={16} className="text-slate-500" />
-                <span className="truncate">{cvFile.name}</span>
-              </div>
-            )}
           </div>
 
           <div>

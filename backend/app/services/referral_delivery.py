@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import mimetypes
 import os
@@ -9,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import HTTPException, UploadFile
+from datetime import datetime
 
 
 @dataclass(frozen=True)
@@ -122,6 +125,55 @@ def upload_cv_to_supabase(
 
     public_url = f"{config.url}/storage/v1/object/public/{config.bucket}/{quoted_path}"
     return object_path, public_url
+
+
+def upload_user_cv_to_supabase(
+    file: UploadFile,
+    *,
+    user_id: str,
+) -> tuple[str, str, int]:
+    """Upload a user's CV to Supabase Storage and return (object_path, public_url, size_bytes)."""
+    config = get_supabase_storage_config()
+
+    # If UploadFile comes from FastAPI async path, it may not be read yet.
+    try:
+        raw = file.file.read()
+    except Exception:
+        # Fallback: try awaitable read not supported here
+        raise HTTPException(status_code=422, detail="Could not read uploaded file")
+
+    if not raw:
+        raise HTTPException(status_code=422, detail="CV file is empty")
+
+    safe_filename = _safe_filename(file.filename)
+    object_path = f"users/{user_id}/{Path(safe_filename).stem}{Path(safe_filename).suffix or '.pdf'}"
+    quoted_path = urllib.parse.quote(object_path, safe="/-_.")
+
+    content_type = file.content_type or mimetypes.guess_type(safe_filename)[0] or "application/octet-stream"
+    upload_url = f"{config.url}/storage/v1/object/{config.bucket}/{quoted_path}?upsert=true"
+
+    request = urllib.request.Request(
+        upload_url,
+        data=raw,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {config.service_role_key}",
+            "Content-Type": content_type,
+            "x-upsert": "true",
+        },
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            response.read()
+    except Exception as exc:  # pragma: no cover - surfaced as HTTP error for the caller
+        raise HTTPException(
+            status_code=502,
+            detail=f"Gagal mengunggah CV ke Supabase Storage: {exc}",
+        ) from exc
+
+    public_url = f"{config.url}/storage/v1/object/public/{config.bucket}/{quoted_path}"
+    return object_path, public_url, len(raw)
 
 
 def build_referral_message(

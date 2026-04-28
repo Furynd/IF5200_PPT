@@ -82,13 +82,20 @@ export default function ProfilePage() {
     if (file.size > 5 * 1024 * 1024) { setError('CV must be under 5 MB'); return }
     setError('')
     setCv(file)
-    const entry = {
-      name: file.name,
-      size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-      uploaded: 'Just now',
-    }
-    setRecentUploads(prev => [entry, ...prev.slice(0, 2)])
-    // Extract skills from CV in the background
+    // Upload CV to backend (which saves to Supabase and persists link)
+    api.uploadCV(file)
+      .then(res => {
+        const entry = {
+          name: res.filename || file.name,
+          size: `${((res.size_bytes || file.size) / (1024 * 1024)).toFixed(1)} MB`,
+          uploaded: res.uploaded_at ? new Date(res.uploaded_at).toLocaleDateString() : 'Just now',
+        }
+        setRecentUploads(prev => [entry, ...prev.slice(0, 2)])
+        // refresh profile so cv_url is available in user context
+        api.getProfile().then(updated => setUser(updated)).catch(() => {})
+      })
+      .catch(err => setError(err.message || 'Failed to upload CV'))
+    // Extract skills from CV in the background (best-effort)
     api.extractSkillsFromPDF(file).catch(() => {})
     e.target.value = ''
   }

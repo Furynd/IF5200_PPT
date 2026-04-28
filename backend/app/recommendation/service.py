@@ -16,9 +16,13 @@ class RecommendationService:
     
     def get_suggested_connections(self, user_id):
         result = []
-        for connected_user_id, score in self.user_repository.get_suggested_connections(user_id):
-            result.append({"user_id": connected_user_id, "score": score})
-        result.sort(key=lambda x: x["score"], reverse=True)
+        for connected_user_id, score, fof in self.user_repository.get_suggested_connections(user_id):
+            result.append({
+                "user_id": connected_user_id,
+                "score": score,
+                "friend_of_friend": fof
+            })
+        result.sort(key=lambda x: (x["friend_of_friend"], x["score"]), reverse=True)
 
         return result
     

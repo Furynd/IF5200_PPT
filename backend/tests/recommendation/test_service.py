@@ -60,7 +60,7 @@ def test_get_connections_unsorted():
 
 def test_get_suggested_connections_unsorted():
     chosen_user_id = np.random.randint(999_999_999)
-    suggested_connections: dict[int, float] = {}
+    suggested_connections: dict[int, tuple[float, bool]] = {}
 
     for _ in range(5 + int(np.random.exponential(5))):
         stop = False
@@ -72,15 +72,16 @@ def test_get_suggested_connections_unsorted():
                 and new_user_id not in suggested_connections
             )
 
-        suggested_connections[new_user_id] = np.random.random()
+        suggested_connections[new_user_id] = (np.random.random(), (np.random.random() < 0.5))
 
     expected_result = [
         {
             "user_id": user_id,
-            "score": score
-        } for user_id, score in suggested_connections.items()
+            "score": score,
+            "friend_of_friend": fof
+        } for user_id, (score, fof) in suggested_connections.items()
     ]
-    expected_result.sort(key=lambda x: x["score"], reverse=True)
+    expected_result.sort(key=lambda x: (int(x["friend_of_friend"]), x["score"]), reverse=True)
 
     class MockUserRepository(UserRepository):
         def __init__(self):
@@ -90,10 +91,10 @@ def test_get_suggested_connections_unsorted():
             assert self.fetch_limit > 0
             self.fetch_limit -= 1
 
-        def get_suggested_connections(self, id: int) -> list[tuple[int, float]]:
+        def get_suggested_connections(self, id: int) -> list[tuple[int, float, bool]]:
             assert id == chosen_user_id
             self._fetch()
-            return [(k, v) for k, v in suggested_connections.items()]
+            return [(k, v, fof) for k, (v, fof) in suggested_connections.items()]
         
     class MockVacancyRepository(VacancyRepository):
         def __init__(self):

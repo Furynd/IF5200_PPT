@@ -292,7 +292,7 @@ def test_user_repository_get_connections_no_connection():
                 id=CHOSEN_USER_ID
             )
 
-def test_user_repository_get_suggested_connections_no_connection():
+def test_user_repository_get_suggested_connections():
     driver, NEO4J_DATABASE = prepare_neo4j_driver_and_database_name()
     CHOSEN_USER_ID = np.random.randint(999_999_999)
 
@@ -309,7 +309,6 @@ def test_user_repository_get_suggested_connections_no_connection():
             repo = UserRepository(driver, database=NEO4J_DATABASE)
             result = repo.get_suggested_connections(CHOSEN_USER_ID)
             assert isinstance(result, list)
-            assert len(result) == 0
         finally:
             driver.execute_query("MATCH (c:User {id: $id}) DELETE c;",
                 database_=NEO4J_DATABASE,

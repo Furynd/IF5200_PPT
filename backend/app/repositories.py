@@ -433,12 +433,9 @@ class UserRepository:
             for r in records
         ]
     
-    def get_suggested_connections(self, id) -> list[tuple[Any, float]]:
+    def get_suggested_connections(self, id) -> list[tuple[Any, float, bool]]:
         """
-        Return a list of tuples <user_id, score> in two hops. Scores are cached in database.
-        """
-        """
-        Return a list of tuples <user_id, score> in one hop. Scores are cached in database.
+        Return a list of tuples <user_id, score, is_friend_of_friends>. Scores are cached in database.
         """
         records, _, _ = self.driver.execute_query(
             """
@@ -455,10 +452,31 @@ class UserRepository:
             database_=self.database,
             id=id,
         )
-        return [
-            (r["id"], float(r["score"]))
+        first_results = [
+            (r["id"], float(r["score"]), True)
             for r in records
         ]
+
+        records, _, _ = self.driver.execute_query(
+            """
+                MATCH (n2:User)
+                    -[:WORKS_AT]->(:Company)
+                    -[:OPENS]->(v:Vacancy)
+                    -[e:SUGGESTED_TO]->(n)
+                WHERE n <> n2
+                AND NOT (n:User {id: $id})-[:CONNECTED_TO]-(n2)
+                AND NOT (n:User {id: $id})-[:CONNECTED_TO]-()-[:CONNECTED_TO]-(n2)
+                RETURN n2.id AS id, MAX(e.score) AS score;
+            """,
+            database_=self.database,
+            id=id,
+        )
+        second_results = [
+            (r["id"], float(r["score"]), False)
+            for r in records
+        ]
+
+        return first_results + second_results
     
     def get_vacancies_from_target_current_companies(self, id, target_user_id) -> list[tuple[Any, float]]:
         """

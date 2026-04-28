@@ -41,6 +41,9 @@ class FangContentBasedScorer:
             score_numerator += level * sim
             score_denumerator += sim
 
+        if score_denumerator == 0.0:
+            return 0.0
+
         return score_numerator / score_denumerator
 
 class FangScorer:

@@ -205,7 +205,7 @@ export default function ConnectionPage() {
       </Link>
 
       <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="h-24 bg-gradient-to-r from-slate-900 via-cyan-900 to-cyan-700" />
+        <div className="h-24 bg-gradient-to-r from-cyan-700 via-cyan-900 to-slate-900" />
         <div className="px-6 pb-6">
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 -mt-10">
             <div className="flex items-end gap-4">

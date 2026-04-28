@@ -2,26 +2,30 @@
 CV skill extraction endpoint.
 
 POST /api/cv/extract-skills
-  - Accepts plain text (JSON body) or a PDF file upload (multipart).
-  - Fetches current Skill nodes from Neo4j at request time — no hardcoded list.
-  - Returns matched skills with score and match_type.
+    - Accepts plain text (JSON body) or a PDF file upload (multipart).
+    - Fetches current Skill nodes from Neo4j at request time — no hardcoded list.
+    - Returns matched skills with score and match_type.
 """
 
 import io
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from neo4j import AsyncDriver
-from pypdf import PdfReader
 
 from app.db.neo4j import get_neo4j_driver
-from app.services.skill_extractor import fetch_skills, extract_skills, MatchedSkill
-from fastapi import Depends, File, UploadFile
-from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import get_current_user_id
 from app.models.schema import User
+from app.services.skill_extractor import (
+    MatchedSkill,
+    extract_and_store_user_skills,
+    extract_skills,
+    fetch_skills,
+)
 from app.services.referral_delivery import upload_user_cv_to_supabase
-from datetime import datetime
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -35,6 +39,24 @@ class CVTextRequest(BaseModel):
 class ExtractSkillsResponse(BaseModel):
     matched_count: int
     skills: list[MatchedSkill]
+
+
+def _extract_pdf_text_from_raw(raw: bytes) -> str:
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        try:
+            from PyPDF2 import PdfReader
+        except ImportError as exc:
+            raise HTTPException(status_code=503, detail="PDF parsing dependency is not installed") from exc
+
+    reader = PdfReader(io.BytesIO(raw))
+    return "\n".join(page.extract_text() or "" for page in reader.pages)
+
+
+def _is_pdf_upload(file: UploadFile) -> bool:
+    filename = (file.filename or "").lower()
+    return file.content_type in ("application/pdf", "application/octet-stream") or filename.endswith(".pdf")
 
 
 @router.post("/cv/extract-skills", response_model=ExtractSkillsResponse)
@@ -65,10 +87,7 @@ async def extract_skills_from_pdf(
         raise HTTPException(status_code=413, detail="File too large (max 500 KB)")
 
     try:
-        reader = PdfReader(io.BytesIO(raw))
-        cv_text = "\n".join(
-            page.extract_text() or "" for page in reader.pages
-        )
+        cv_text = _extract_pdf_text_from_raw(raw)
     except Exception:
         raise HTTPException(status_code=422, detail="Could not parse PDF")
 
@@ -81,9 +100,10 @@ async def extract_skills_from_pdf(
 
 
 @router.post("/cv/upload")
-def upload_user_cv(
+async def upload_user_cv(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
+    driver: AsyncDriver = Depends(get_neo4j_driver),
     user_id: str = Depends(get_current_user_id),
 ):
     # Upload to Supabase Storage
@@ -100,6 +120,17 @@ def upload_user_cv(
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    if _is_pdf_upload(file):
+        try:
+            file.file.seek(0)
+            raw = file.file.read()
+            if raw:
+                cv_text = _extract_pdf_text_from_raw(raw)
+                if cv_text.strip():
+                    await extract_and_store_user_skills(driver, user_id, cv_text)
+        except Exception:
+            pass
 
     return {
         "filename": object_path,

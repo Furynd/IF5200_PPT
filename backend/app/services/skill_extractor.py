@@ -11,6 +11,7 @@ Skills are fetched live from Neo4j so adding new nodes requires no code change.
 
 import re
 from typing_extensions import TypedDict
+from typing import List
 
 from neo4j import AsyncDriver
 from rapidfuzz import fuzz, process
@@ -45,6 +46,53 @@ async def fetch_skills(driver: AsyncDriver) -> list[dict]:
     async with driver.session() as session:
         result = await session.run("MATCH (s:Skill) RETURN s.id AS id, s.name AS name")
         return await result.data()
+
+
+async def store_user_skills(driver: AsyncDriver, user_id: str, matched_skills: List[MatchedSkill]) -> None:
+    """Persist matched skills for a user in Neo4j.
+
+    For each matched skill this will MERGE a `HAS_SKILL` relationship from
+    the `User` node to the `Skill` node and set properties on the edge:
+    - `level`: numeric score (0.0-1.0)
+    - `match_type`: one of "exact" | "alias" | "fuzzy"
+    Existing edges will be updated with the new values.
+    """
+    if not matched_skills:
+        return
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        try:
+            for ms in matched_skills:
+                # Use MERGE to create the relationship idempotently and
+                # SET to update the level/match_type timestamp.
+                await tx.run(
+                    """
+                    MATCH (u:User {id: $user_id})
+                    MATCH (s:Skill {id: $skill_id})
+                    MERGE (u)-[hs:HAS_SKILL]->(s)
+                    SET hs.level = $level, hs.match_type = $match_type, hs.updated_at = datetime()
+                    """,
+                    user_id=user_id,
+                    skill_id=ms["id"],
+                    level=float(ms["score"]),
+                    match_type=ms["match_type"],
+                )
+            await tx.commit()
+        except Exception:
+            await tx.rollback()
+            raise
+
+
+async def extract_and_store_user_skills(driver: AsyncDriver, user_id: str, cv_text: str) -> List[MatchedSkill]:
+    """Convenience wrapper: fetch skills, extract matches from `cv_text`, and store them for `user_id`.
+
+    Returns the list of matched skills that were persisted.
+    """
+    db_skills = await fetch_skills(driver)
+    matches = extract_skills(cv_text, db_skills)
+    await store_user_skills(driver, user_id, matches)
+    return matches
 
 
 def _normalize(text: str) -> str:

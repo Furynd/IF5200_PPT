@@ -1,12 +1,12 @@
 import numpy as np
 
-from backend.app.repositories import FangCollaborativeParameterRepository, FangContentBasedRepository, VacancyRepository
+from backend.app.repositories import ConfigRepository, FangCollaborativeParameterRepository, UserRepository, VacancyRepository
 
 class FangCollaborativeScorer:
     def __init__(self, repository: FangCollaborativeParameterRepository):
         self.repo = repository
 
-    def get_score(self, user_id: int, skill_id: int) -> float:
+    def get_score(self, user_id, skill_id) -> float:
         global_bias = self.repo.get_global_bias()
         user_latent_vector = self.repo.get_user_latent_vector(user_id)
         user_bias = self.repo.get_user_bias(user_id)
@@ -22,14 +22,19 @@ class FangCollaborativeScorer:
         )
     
 class FangContentBasedScorer:
-    def __init__(self, repository: FangContentBasedRepository):
-        self.repo = repository
+    def __init__(
+            self,
+            user_repository: UserRepository,
+            config_repository: ConfigRepository
+        ):
+        self.user_repo = user_repository
+        self.config_repo = config_repository
 
-    def get_score(self, user_id: int, skill_id: int) -> float:
-        similar_skills = self.repo.get_similar_skills(user_id, skill_id)
-        if len(similar_skills) == 0:
-            return 0.0
-
+    def get_score(self, user_id, skill_id) -> float:
+        embed_id = self.config_repo.get_embeddings_id()
+        min_sim_score = self.config_repo.get_fang_minimum_similarity()
+        similar_skills = self.user_repo.get_all_similar_skills(user_id, skill_id, embed_id, min_sim_score)
+        
         score_numerator = 0.0
         score_denumerator = 0.0
         for _, level, sim in similar_skills:
@@ -44,7 +49,7 @@ class FangScorer:
         self.collaborative_scorer = collaborative_scorer
         self.content_based_scorer = content_based_scorer
     
-    def get_score(self, user_id: int, skill_id: int) -> float:
+    def get_score(self, user_id, skill_id) -> float:
         collaborative_score = self.collaborative_scorer.get_score(user_id, skill_id)
         content_based_score = self.content_based_scorer.get_score(user_id, skill_id)
         return collaborative_score + content_based_score
@@ -54,7 +59,7 @@ class FangVacancyScorer:
         self.child_scorer = child_scorer
         self.repository = repository
     
-    def get_score(self, user_id: int, vacancy_id: int) -> float:
+    def get_score(self, user_id, vacancy_id) -> float:
         total_score = 0.0
         skill_count = 0
 

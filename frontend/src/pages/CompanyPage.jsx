@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Building2, Users, Send, ArrowLeft, Loader2, AlertCircle, UserCheck, UserX } from 'lucide-react'
 import { api } from '../lib/api'
+import ReferralRequestModal from '../components/ReferralRequestModal'
 
 export default function CompanyPage() {
   const { id } = useParams()
@@ -9,6 +10,8 @@ export default function CompanyPage() {
   const [connections, setConnections] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [referralSuccess, setReferralSuccess] = useState('')
+  const [selectedConnection, setSelectedConnection] = useState(null)
 
   useEffect(() => {
     if (!id) return
@@ -67,6 +70,12 @@ export default function CompanyPage() {
         <ArrowLeft size={16} /> Kembali ke pencarian
       </Link>
 
+      {referralSuccess && (
+        <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          {referralSuccess}
+        </div>
+      )}
+
       {/* Company header */}
       <div className="bg-white rounded-xl border border-surface-200 p-6">
         <div className="flex items-start gap-4">
@@ -92,6 +101,7 @@ export default function CompanyPage() {
               connections={directConnections}
               companyId={company.id}
               companyName={company.name}
+              onRequestReferral={setSelectedConnection}
             />
           )}
           {secondDegreeConnections.length > 0 && (
@@ -101,15 +111,25 @@ export default function CompanyPage() {
               connections={secondDegreeConnections}
               companyId={company.id}
               companyName={company.name}
+              onRequestReferral={setSelectedConnection}
             />
           )}
         </>
       )}
+      <ReferralRequestModal
+        open={Boolean(selectedConnection)}
+        company={company}
+        connection={selectedConnection}
+        onClose={() => setSelectedConnection(null)}
+        onSuccess={() => {
+          setReferralSuccess('Referral berhasil dikirim via Fonnte dan CV sudah disimpan di Supabase Storage.')
+        }}
+      />
     </div>
   )
 }
 
-function ConnectionList({ title, subtitle, connections, companyId, companyName }) {
+function ConnectionList({ title, subtitle, connections, companyId, companyName, onRequestReferral }) {
   return (
     <div className="bg-white rounded-xl border border-surface-200 p-6">
       <div className="mb-4">
@@ -126,6 +146,7 @@ function ConnectionList({ title, subtitle, connections, companyId, companyName }
             conn={conn}
             companyId={companyId}
             companyName={companyName}
+            onRequestReferral={onRequestReferral}
           />
         ))}
       </ul>
@@ -133,7 +154,7 @@ function ConnectionList({ title, subtitle, connections, companyId, companyName }
   )
 }
 
-function ConnectionItem({ conn, companyId, companyName }) {
+function ConnectionItem({ conn, companyId, companyName, onRequestReferral }) {
   const { user, job_title, hops, path_via, is_open_to_refer } = conn
 
   return (
@@ -158,9 +179,9 @@ function ConnectionItem({ conn, companyId, companyName }) {
       <div className="flex items-center gap-2 flex-shrink-0">
         {is_open_to_refer ? (
           <button
-            disabled
-            title="Fitur referral akan tersedia di minggu 5"
-            className="flex items-center gap-1 px-3 py-1.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
+            type="button"
+            onClick={() => onRequestReferral?.(conn)}
+            className="flex items-center gap-1 px-3 py-1.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700"
           >
             <Send size={14} /> Minta Referral
           </button>

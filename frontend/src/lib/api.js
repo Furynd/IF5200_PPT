@@ -4,7 +4,10 @@ const API_BASE = '/api'
 
 async function request(path, options = {}) {
   const token = getToken()
-  const headers = { 'Content-Type': 'application/json', ...options.headers }
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData
+  const headers = isFormData
+    ? { ...options.headers }
+    : { 'Content-Type': 'application/json', ...options.headers }
   if (token && !headers['Authorization']) headers['Authorization'] = `Bearer ${token}`
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers })
@@ -92,7 +95,19 @@ export const api = {
     request('/cv/extract-skills', { method: 'POST', body: JSON.stringify({ cv_text: cvText }) }),
 
   // Referrals (Week 5)
-  sendReferral: (data) => request('/referrals', { method: 'POST', body: JSON.stringify(data) }),
+  sendReferral: (data) => {
+    const body = data instanceof FormData
+      ? data
+      : (() => {
+          const formData = new FormData()
+          Object.entries(data || {}).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) formData.append(key, value)
+          })
+          return formData
+        })()
+
+    return request('/referrals', { method: 'POST', body })
+  },
   getReferrals: () => request('/referrals'),
   respondReferral: (id, status) =>
     request(`/referrals/${id}/respond`, { method: 'PUT', body: JSON.stringify({ status }) }),

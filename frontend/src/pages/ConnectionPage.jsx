@@ -215,11 +215,6 @@ export default function ConnectionPage() {
               <div className="pb-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-3xl font-black text-slate-900">{connection.user.full_name}</h1>
-                  {recommendationScore !== undefined && recommendationScore !== null && (
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                      Score {Number(recommendationScore).toFixed(2)}
-                    </span>
-                  )}
                   <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isOpenToRefer ? 'bg-cyan-50 text-cyan-700' : 'bg-slate-100 text-slate-500'}`}>
                     {isOpenToRefer ? 'Open to refer' : 'Referral closed'}
                   </span>

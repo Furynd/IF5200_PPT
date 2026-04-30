@@ -126,7 +126,7 @@ function AddConnectionModal({ open, onClose, directRecommendations, suggestedRec
         <div className="flex items-center justify-between gap-4 px-6 py-5 border-b border-slate-200">
           <div>
             <h3 className="text-xl font-bold text-slate-900">Add New Connection</h3>
-            <p className="text-sm text-slate-500 mt-1">Recommended people and connection tools live here now.</p>
+            <p className="text-sm text-slate-500 mt-1">Recommended connections for you.</p>
           </div>
           <button
             onClick={onClose}
@@ -138,28 +138,10 @@ function AddConnectionModal({ open, onClose, directRecommendations, suggestedRec
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <div>
-                <h4 className="text-base font-bold text-slate-900">Direct Recommendations</h4>
-                <p className="text-sm text-slate-600">People paling relevan dari graph rekomendasi baru.</p>
-              </div>
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 border border-slate-200">
-                {directRecommendations.length} hasil
-              </span>
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {directRecommendations.map((item) => (
-                <RecommendationCard key={item.user_id} item={item} />
-              ))}
-            </div>
-          </section>
-
           <section className="rounded-2xl border border-slate-200 bg-white p-5">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
                 <h4 className="text-base font-bold text-slate-900">Suggested Connections</h4>
-                <p className="text-sm text-slate-500">Koneksi 2-hop yang juga masuk prioritas rekomendasi.</p>
               </div>
               <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                 {suggestedRecommendations.length} hasil

@@ -3,11 +3,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db.neo4j import init_neo4j, close_neo4j
+from app.core.database import engine
+from app.models.schema import Base
 from app.routers import connections, companies, cv
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
     await init_neo4j()
     yield
     await close_neo4j()

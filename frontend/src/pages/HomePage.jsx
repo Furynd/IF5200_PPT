@@ -417,7 +417,7 @@ export default function HomePage() {
         open={syncOpen}
         onClose={() => setSyncOpen(false)}
         directRecommendations={recommendationCards.direct.slice(0, 6)}
-        suggestedRecommendations={recommendationCards.suggested.slice(0, 6)}
+        suggestedRecommendations={recommendationCards.suggested.slice(0, 50)}
       />
     </div>
   )

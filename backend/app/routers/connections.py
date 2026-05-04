@@ -8,9 +8,12 @@ AUTH NOTE (temporary):
   remove the default value.
 """
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from neo4j import AsyncDriver
+from sqlalchemy.orm import Session
 
 from app.db.neo4j import get_neo4j_driver
 from app.core.database import get_db
@@ -74,13 +77,23 @@ async def connections_at_company(
 
 async def _fetch_both(driver, user_id, company_id, max_hops, seeker):
     import asyncio
-    company_task = recommendation.get_network_stats  # placeholder — run both concurrently
     co, raw = await asyncio.gather(
         company_graph.get_company(driver, company_id),
         recommendation.get_connections_at_company(driver, user_id, company_id, max_hops),
     )
     ranked = recommendation.rank_connections(seeker, raw)
     return co, ranked
+# ---------------------------------------------------------------------------
+# Connection request endpoints (two-way add friend)
+# ---------------------------------------------------------------------------
+
+class ConnectionRequestResponse(BaseModel):
+    id: str
+    from_user_id: str
+    to_user_id: str
+    status: str
+    created_at: datetime
+    responded_at: datetime | None = None
 
 
 class AddConnectionRequest(BaseModel):

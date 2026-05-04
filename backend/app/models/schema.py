@@ -37,7 +37,7 @@ class Company(Base):
 
 class ReferralRequest(Base):
     __tablename__ = "referral_requests"
-    
+
     id = Column(String, primary_key=True, default=generate_uuid)
     requester_id = Column(String, ForeignKey("users.id"), nullable=False)
     referee_id = Column(String, ForeignKey("users.id"), nullable=False)
@@ -45,4 +45,14 @@ class ReferralRequest(Base):
     status = Column(String, default="pending") # pending/sent/viewed/accepted/declined
     message_channel = Column(String, default="whatsapp") # whatsapp / email
     sent_at = Column(DateTime, default=datetime.utcnow)
+    responded_at = Column(DateTime, nullable=True)
+
+class ConnectionRequest(Base):
+    __tablename__ = "connection_requests"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    from_user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    to_user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    status = Column(String, default="pending")  # pending/accepted/declined
+    created_at = Column(DateTime, default=datetime.utcnow)
     responded_at = Column(DateTime, nullable=True)

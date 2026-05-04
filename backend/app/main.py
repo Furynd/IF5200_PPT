@@ -6,11 +6,14 @@ from app.core.database import engine
 from app.models.schema import Base
 
 from app.db.neo4j import init_neo4j, close_neo4j
+from app.core.database import engine
+from app.models.schema import Base
 from app.routers import connections, companies, cv, recommendations, referrals, users
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
     await init_neo4j()
     yield
     await close_neo4j()

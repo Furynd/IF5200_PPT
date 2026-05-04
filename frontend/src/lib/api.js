@@ -66,7 +66,8 @@ export const api = {
   // Auth
   login: (data) => request('/auth/dev-login', { method: 'POST', body: JSON.stringify(data) }),
   register: (data) => request('/auth/dev-register', { method: 'POST', body: JSON.stringify(data) }),
-  syncAuthProfile: (data) => request('/auth/sync', { method: 'POST', body: JSON.stringify(data) }),
+  syncAuthProfile: (data, headers) =>
+    request('/auth/sync', { method: 'POST', body: JSON.stringify(data), headers }),
   me: () => request('/auth/me'),
 
   // Profile

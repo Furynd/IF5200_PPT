@@ -21,8 +21,7 @@ class RecommendationService:
     
     def get_suggested_connections(self, user_id):
         result = []
-        for connected_user_id, score in self.user_repository.get_suggested_connections(user_id):
-            fof = True
+        for connected_user_id, score, fof in self.user_repository.get_suggested_connections(user_id):
             result.append({
                 "user_id": connected_user_id,
                 "score": score,

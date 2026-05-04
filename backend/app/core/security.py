@@ -11,7 +11,11 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 # Skema otorisasi Bearer Token untuk Swagger UI
-security = HTTPBearer()
+security = HTTPBearer(
+    scheme_name="SupabaseJWT",
+    bearerFormat="JWT",
+    description="Supabase access token from the Authorize button in Swagger UI",
+)
 
 # Dapatkan dari Supabase Dashboard -> Settings -> API -> JWT Secret
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "super_secret_jwt_key_untuk_dev_lokal")

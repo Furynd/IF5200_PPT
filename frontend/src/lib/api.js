@@ -86,7 +86,13 @@ export const api = {
   getConnections: (maxHops = 2) =>
     request(`/connections?max_hops=${maxHops}`),
   addConnection: (targetUserId) =>
-    request('/connections', { method: 'POST', body: JSON.stringify({ target_user_id: targetUserId }) }),
+    request(`/connections/request/${targetUserId}`, { method: 'POST' }),
+  acceptConnectionRequest: (requestId) =>
+    request(`/connections/request/${requestId}/accept`, { method: 'POST' }),
+  getIncomingConnectionRequests: () =>
+    request('/connections/requests/incoming'),
+  getOutgoingConnectionRequests: () =>
+    request('/connections/requests/outgoing'),
   getConnectionsAtCompany: (companyId, maxHops = 2) =>
     request(`/connections/at-company/${companyId}?max_hops=${maxHops}`),
 

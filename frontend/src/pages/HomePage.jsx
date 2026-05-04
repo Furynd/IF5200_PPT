@@ -231,14 +231,46 @@ export default function HomePage() {
   }, [connections])
 
   const recommendationCards = useMemo(() => {
-    const direct = recommendedConnections.map((item) => ({
-      ...item,
-      connection: connectionByUserId.get(item.user_id) || null,
-    }))
-    const suggested = suggestedConnections.map((item) => ({
-      ...item,
-      connection: connectionByUserId.get(item.user_id) || null,
-    }))
+    const direct = recommendedConnections.map((item) => {
+      const connection = connectionByUserId.get(item.user_id) || {
+        user: {
+          id: item.user_id,
+          full_name: item.full_name || 'Unknown User'
+        },
+        job_title: item.job_title,
+        company_name: item.company_name,
+        company_id: null,
+        company_industry: null,
+        is_open_to_refer: true,
+        hops: null,
+        path_via: [],
+        skills: []
+      }
+      return {
+        ...item,
+        connection
+      }
+    })
+    const suggested = suggestedConnections.map((item) => {
+      const connection = connectionByUserId.get(item.user_id) || {
+        user: {
+          id: item.user_id,
+          full_name: item.full_name || 'Unknown User'
+        },
+        job_title: item.job_title,
+        company_name: item.company_name,
+        company_id: null,
+        company_industry: null,
+        is_open_to_refer: true,
+        hops: null,
+        path_via: [],
+        skills: []
+      }
+      return {
+        ...item,
+        connection
+      }
+    })
 
     return {
       direct: direct.filter((item) => item.connection || item.user_id),

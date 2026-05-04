@@ -47,6 +47,8 @@ export default function ConnectionPage() {
   const [referralOpen, setReferralOpen] = useState(false)
   const [addingConnection, setAddingConnection] = useState(false)
   const [connectionAdded, setConnectionAdded] = useState(false)
+  const [incomingRequest, setIncomingRequest] = useState(null)
+  const [outgoingRequest, setOutgoingRequest] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -54,6 +56,9 @@ export default function ConnectionPage() {
     const loadConnection = async () => {
       setLoading(true)
       setError('')
+      setConnectionAdded(false)
+      setIncomingRequest(null)
+      setOutgoingRequest(null)
 
       try {
         let resolvedConnection = initialConnection
@@ -142,15 +147,66 @@ export default function ConnectionPage() {
     }
   }, [initialConnection, initialRecommendation, me?.id, userId])
 
-  const handleAddConnection = async () => {
+  useEffect(() => {
+    let cancelled = false
+
+    const loadRequests = async () => {
+      if (!me?.id || !userId) return
+
+      try {
+        const [incomingData, outgoingData] = await Promise.all([
+          api.getIncomingConnectionRequests(),
+          api.getOutgoingConnectionRequests(),
+        ])
+
+        if (cancelled) return
+
+        setIncomingRequest((incomingData.requests || []).find((request) => request.from_user_id === userId) || null)
+        setOutgoingRequest((outgoingData.requests || []).find((request) => request.to_user_id === userId) || null)
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error loading connection requests:', err)
+        }
+      }
+    }
+
+    loadRequests()
+
+    return () => {
+      cancelled = true
+    }
+  }, [me?.id, userId])
+
+  const isConnected = connection?.hops === 1 || connectionAdded
+  const hasIncomingRequest = !isConnected && Boolean(incomingRequest)
+  const hasOutgoingRequest = !isConnected && Boolean(outgoingRequest)
+
+  const handleConnectionAction = async () => {
+    if (!connection?.user?.id) return
+
     try {
       setAddingConnection(true)
-      await api.addConnection(connection.user.id)
-      setConnectionAdded(true)
-      console.log('Connection added successfully')
+
+      if (hasIncomingRequest && incomingRequest) {
+        await api.acceptConnectionRequest(incomingRequest.id)
+        setIncomingRequest(null)
+        setOutgoingRequest(null)
+        setConnection((current) => (current ? { ...current, hops: 1 } : current))
+        setConnectionAdded(true)
+        console.log('Connection request accepted successfully')
+        return
+      }
+
+      if (hasOutgoingRequest) {
+        return
+      }
+
+      const request = await api.addConnection(connection.user.id)
+      setOutgoingRequest(request)
+      console.log('Connection request sent successfully')
     } catch (err) {
-      console.error('Failed to add connection:', err)
-      alert('Failed to add connection: ' + err.message)
+      console.error('Failed to update connection:', err)
+      alert('Failed to update connection: ' + err.message)
     } finally {
       setAddingConnection(false)
     }
@@ -231,7 +287,7 @@ export default function ConnectionPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              {connection.hops === 1 ? (
+              {isConnected ? (
                 // Already connected: show referral options
                 <>
                   <button
@@ -243,24 +299,35 @@ export default function ConnectionPage() {
                     <Send size={16} /> Request Referral
                   </button>
                 </>
-              ) : connectionAdded ? (
-                // Connection was just added
-                <button
-                  disabled
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-100 px-4 py-2.5 text-sm font-semibold text-emerald-700 cursor-default"
-                >
-                  <Send size={16} /> Connection Added
-                </button>
-              ) : (
-                // Not connected yet: show add connection button
+              ) : hasIncomingRequest ? (
+                // The other user already requested this connection; accept it now
                 <button
                   type="button"
-                  onClick={handleAddConnection}
+                  onClick={handleConnectionAction}
+                  disabled={addingConnection}
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-75"
+                >
+                  {addingConnection ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                  {addingConnection ? 'Accepting...' : 'Accept Connection Request'}
+                </button>
+              ) : hasOutgoingRequest ? (
+                // Request already sent, waiting for the recipient to accept
+                <button
+                  disabled
+                  className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-500 cursor-default"
+                >
+                  <Send size={16} /> Request Sent
+                </button>
+              ) : (
+                // Not connected yet: send a connection request
+                <button
+                  type="button"
+                  onClick={handleConnectionAction}
                   disabled={addingConnection}
                   className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 disabled:cursor-wait disabled:opacity-75"
                 >
                   {addingConnection ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                  {addingConnection ? 'Adding...' : 'Add Connection'}
+                  {addingConnection ? 'Requesting...' : 'Request Connection'}
                 </button>
               )}
               {company && (
@@ -355,7 +422,7 @@ export default function ConnectionPage() {
                         <ExternalLink size={14} /> Source
                       </a>
                     )}
-                    {connection.hops === 1 && (
+                    {isConnected && (
                       <button
                         type="button"
                         onClick={() => setReferralOpen(true)}

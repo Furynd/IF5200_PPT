@@ -18,17 +18,22 @@ class Neo4jUserRepository(UserRepository):
         records, _, _ = self.driver.execute_query(
             """
                 MATCH (n:User {id: $id})
-                    -[:CONNECTED_TO]-(n2:User)
-                    -[:WORKS_AT]->(:Company)
-                    -[:OPENS]->(v:Vacancy)
-                    -[e:SUGGESTED_TO]->(n)
-                RETURN n2.id AS id, MAX(e.score) AS score;
+                    -[r:CONNECTED_TO]-(n2:User)
+                OPTIONAL MATCH (n2)-[:WORKS_AT]->(c:Company)
+                RETURN n2.id AS id, r.score AS score, n2.full_name AS full_name, n2.job_title AS job_title, c.name AS company_name
+                ORDER BY score DESC;
             """,
             database_=self.database,
             id=id,
         )
         return [
-            (r["id"], float(r["score"]))
+            ({
+                "user_id": r["id"],
+                "score": float(r["score"]) if r["score"] is not None else 0.0,
+                "full_name": r.get("full_name"),
+                "job_title": r.get("job_title"),
+                "company_name": r.get("company_name")
+            })
             for r in records
         ]
 
@@ -36,42 +41,55 @@ class Neo4jUserRepository(UserRepository):
         """
         Return a list of tuples <user_id, score, is_friend_of_friends>. Scores are cached in database.
         """
+        # Friends of friends (2-hop connections)
         records, _, _ = self.driver.execute_query(
             """
                 MATCH (n:User {id: $id})
-                    -[:CONNECTED_TO]-(:User)
-                    -[:CONNECTED_TO]-(n2:User)
-                    -[:WORKS_AT]->(:Company)
-                    -[:OPENS]->(v:Vacancy)
-                    -[e:SUGGESTED_TO]->(n)
+                    -[:CONNECTED_TO]-(intermediate:User)
+                    -[r:CONNECTED_TO]-(n2:User)
+                OPTIONAL MATCH (n2)-[:WORKS_AT]->(c:Company)
                 WHERE n <> n2
                 AND NOT (n)-[:CONNECTED_TO]-(n2)
-                RETURN n2.id AS id, MAX(e.score) AS score;
+                RETURN n2.id AS id, r.score AS score, n2.full_name AS full_name, n2.job_title AS job_title, c.name AS company_name;
             """,
             database_=self.database,
             id=id,
         )
         first_results = [
-            (r["id"], float(r["score"]), True)
+            {
+                "user_id": r["id"],
+                "score": float(r["score"]) if r["score"] is not None else 0.0,
+                "full_name": r.get("full_name"),
+                "job_title": r.get("job_title"),
+                "company_name": r.get("company_name"),
+                "friend_of_friend": True
+            }
             for r in records
         ]
 
+        # Other users not in first or second degree
         records, _, _ = self.driver.execute_query(
             """
+                MATCH (n:User {id: $id})
                 MATCH (n2:User)
-                    -[:WORKS_AT]->(:Company)
-                    -[:OPENS]->(v:Vacancy)
-                    -[e:SUGGESTED_TO]->(n)
+                OPTIONAL MATCH (n2)-[:WORKS_AT]->(c:Company)
                 WHERE n <> n2
-                AND NOT (n:User {id: $id})-[:CONNECTED_TO]-(n2)
-                AND NOT (n:User {id: $id})-[:CONNECTED_TO]-()-[:CONNECTED_TO]-(n2)
-                RETURN n2.id AS id, MAX(e.score) AS score;
+                AND NOT (n)-[:CONNECTED_TO]-(n2)
+                AND NOT (n)-[:CONNECTED_TO]-()-[:CONNECTED_TO]-(n2)
+                RETURN DISTINCT n2.id AS id, 0.0 AS score, n2.full_name AS full_name, n2.job_title AS job_title, c.name AS company_name;
             """,
             database_=self.database,
             id=id,
         )
         second_results = [
-            (r["id"], float(r["score"]), False)
+            {
+                "user_id": r["id"],
+                "score": float(r["score"]),
+                "full_name": r.get("full_name"),
+                "job_title": r.get("job_title"),
+                "company_name": r.get("company_name"),
+                "friend_of_friend": False
+            }
             for r in records
         ]
 
@@ -86,13 +104,13 @@ class Neo4jUserRepository(UserRepository):
         """
         records, _, _ = self.driver.execute_query(
             """
-                MATCH (n2:User {id: $target_id})
-                    -[:WORKS_AT]->(:Company)
+                MATCH (target:User {id: $target_id})
+                    -[:WORKS_AT]->(company:Company)
                     -[:OPENS]->(v:Vacancy)
-                    -[e:SUGGESTED_TO]->(n:User {id: $id})
-                WHERE n <> n2
-                AND NOT (n)-[:CONNECTED_TO]-(n2)
-                RETURN DISTINCT v.id AS id, e.score AS score;
+                OPTIONAL MATCH (v)-[r:SUGGESTED_TO]->(user:User {id: $id})
+                WHERE target <> user:User {id: $id}
+                AND NOT (user:User {id: $id})-[:CONNECTED_TO]-(target)
+                RETURN DISTINCT v.id AS id, COALESCE(r.score, 0.5) AS score;
             """,
             database_=self.database,
             id=id,
@@ -105,48 +123,58 @@ class Neo4jUserRepository(UserRepository):
 
     def get_connections_for_specific_company(self, id: Any, company_id: Any) -> list[tuple[Any, float]]:
         """
-        Return a list of tuples <user_id, score> in one hop. Scores are cached in database.
+        Return a list of tuples <user_id, score> in one hop working at a specific company.
         """
         records, _, _ = self.driver.execute_query(
             """
                 MATCH (n:User {id: $id})
-                    -[:CONNECTED_TO]-(n2:User)
-                    -[:WORKS_AT]->(:Company {id: $company_id})
-                    -[:OPENS]->(v:Vacancy)
-                    -[e:SUGGESTED_TO]->(n)
-                RETURN n2.id AS id, MAX(e.score) AS score;
+                    -[r:CONNECTED_TO]-(n2:User)
+                    -[:WORKS_AT]->(company:Company {id: $company_id})
+                RETURN n2.id AS id, r.score AS score, n2.full_name AS full_name, n2.job_title AS job_title, company.name AS company_name
+                ORDER BY score DESC;
             """,
             database_=self.database,
             id=id,
             company_id=company_id
         )
         return [
-            (r["id"], float(r["score"]))
+            ({
+                "user_id": r["id"],
+                "score": float(r["score"]) if r["score"] is not None else 0.0,
+                "full_name": r.get("full_name"),
+                "job_title": r.get("job_title"),
+                "company_name": r.get("company_name")
+            })
             for r in records
         ]
 
     def get_suggested_connections_for_specific_company(self, id: Any, company_id: Any) -> list[tuple[Any, float]]:
         """
-        Return a list of tuples <user_id, score> in two hops. Scores are cached in database.
+        Return a list of tuples <user_id, score> in two hops working at a specific company.
         """
         records, _, _ = self.driver.execute_query(
             """
                 MATCH (n:User {id: $id})
-                    -[:CONNECTED_TO]-(:User)
-                    -[:CONNECTED_TO]-(n2:User)
-                    -[:WORKS_AT]->(:Company {id: $company_id})
-                    -[:OPENS]->(v:Vacancy)
-                    -[e:SUGGESTED_TO]->(n)
+                    -[:CONNECTED_TO]-(intermediate:User)
+                    -[r:CONNECTED_TO]-(n2:User)
+                    -[:WORKS_AT]->(company:Company {id: $company_id})
                 WHERE n <> n2
                 AND NOT (n)-[:CONNECTED_TO]-(n2)
-                RETURN n2.id AS id, MAX(e.score) AS score;
+                RETURN n2.id AS id, r.score AS score, n2.full_name AS full_name, n2.job_title AS job_title, company.name AS company_name
+                ORDER BY score DESC;
             """,
             database_=self.database,
             id=id,
             company_id=company_id,
         )
         return [
-            (r["id"], float(r["score"]))
+            ({
+                "user_id": r["id"],
+                "score": float(r["score"]) if r["score"] is not None else 0.0,
+                "full_name": r.get("full_name"),
+                "job_title": r.get("job_title"),
+                "company_name": r.get("company_name")
+            })
             for r in records
         ]
 

@@ -96,10 +96,6 @@ class ConnectionRequestResponse(BaseModel):
     responded_at: datetime | None = None
 
 
-class AddConnectionRequest(BaseModel):
-    target_user_id: str
-
-
 @router.post("/connections/request/{target_user_id}", response_model=ConnectionRequestResponse)
 async def send_connection_request(
     target_user_id: str,

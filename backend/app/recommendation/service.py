@@ -13,21 +13,29 @@ class RecommendationService:
 
     def get_connections(self, user_id):
         result = []
-        for connected_user_id, score in self.user_repository.get_connections(user_id):
-            result.append({"user_id": connected_user_id, "score": score})
+        for item in self.user_repository.get_connections(user_id):
+            # Handle both dict and tuple formats for backwards compatibility
+            if isinstance(item, dict):
+                result.append(item)
+            else:
+                result.append({"user_id": item[0], "score": item[1]})
         result.sort(key=lambda x: x["score"], reverse=True)
 
         return result
     
     def get_suggested_connections(self, user_id):
         result = []
-        for connected_user_id, score, fof in self.user_repository.get_suggested_connections(user_id):
-            result.append({
-                "user_id": connected_user_id,
-                "score": score,
-                "friend_of_friend": fof
-            })
-        result.sort(key=lambda x: (x["friend_of_friend"], x["score"]), reverse=True)
+        for item in self.user_repository.get_suggested_connections(user_id):
+            # Handle both dict and tuple formats for backwards compatibility
+            if isinstance(item, dict):
+                result.append(item)
+            else:
+                result.append({
+                    "user_id": item[0],
+                    "score": item[1],
+                    "friend_of_friend": item[2] if len(item) > 2 else False
+                })
+        result.sort(key=lambda x: (x.get("friend_of_friend", False), x["score"]), reverse=True)
 
         return result
     
@@ -48,16 +56,24 @@ class RecommendationService:
     
     def get_connections_from_specific_company(self, user_id, company_id):
         result = []
-        for connected_user_id, score in self.user_repository.get_connections_for_specific_company(user_id, company_id):
-            result.append({"user_id": connected_user_id, "score": score})
+        for item in self.user_repository.get_connections_for_specific_company(user_id, company_id):
+            # Handle both dict and tuple formats for backwards compatibility
+            if isinstance(item, dict):
+                result.append(item)
+            else:
+                result.append({"user_id": item[0], "score": item[1]})
         result.sort(key=lambda x: x["score"], reverse=True)
 
         return result
     
     def get_suggested_connections_from_specific_company(self, user_id, company_id):
         result = []
-        for connected_user_id, score in self.user_repository.get_suggested_connections_for_specific_company(user_id, company_id):
-            result.append({"user_id": connected_user_id, "score": score})
+        for item in self.user_repository.get_suggested_connections_for_specific_company(user_id, company_id):
+            # Handle both dict and tuple formats for backwards compatibility
+            if isinstance(item, dict):
+                result.append(item)
+            else:
+                result.append({"user_id": item[0], "score": item[1]})
         result.sort(key=lambda x: x["score"], reverse=True)
 
         return result

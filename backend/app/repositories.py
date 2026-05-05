@@ -464,10 +464,11 @@ class UserRepository:
                 MATCH (n2:User)
                     -[:WORKS_AT]->(:Company)
                     -[:OPENS]->(v:Vacancy)
-                    -[e:SUGGESTED_TO]->(n)
+                    -[e:SUGGESTED_TO]->(n:User {id: $id})
                 WHERE n <> n2
-                AND NOT (n:User {id: $id})-[:CONNECTED_TO]-(n2)
-                AND NOT (n:User {id: $id})-[:CONNECTED_TO]-()-[:CONNECTED_TO]-(n2)
+                AND n.id <> $id
+                AND NOT (n)-[:CONNECTED_TO]-(n2)
+                AND NOT (n)-[:CONNECTED_TO]-()-[:CONNECTED_TO]-(n2)
                 RETURN n2.id AS id, MAX(e.score) AS score;
             """,
             database_=self.database,

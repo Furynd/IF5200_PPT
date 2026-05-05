@@ -6,6 +6,7 @@ export default function ReferralRequestModal({ open, company, connection, onClos
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const isOpenToRefer = connection?.is_open_to_refer !== false
 
   if (!open || !company || !connection) return null
 
@@ -64,7 +65,7 @@ export default function ReferralRequestModal({ open, company, connection, onClos
 
         <form onSubmit={handleSubmit} className="space-y-4 px-5 py-5">
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-            {connection.is_open_to_refer
+            {isOpenToRefer
               ? 'Koneksi ini terbuka untuk referral. Pesan akan dikirim via Fonnte free menggunakan CV dari profil kamu.'
               : 'Koneksi ini tidak sedang membuka referral.'}
           </div>
@@ -96,7 +97,7 @@ export default function ReferralRequestModal({ open, company, connection, onClos
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !isOpenToRefer}
               className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}

@@ -1,5 +1,6 @@
 import io
 import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -103,3 +104,86 @@ def test_upload_cv_to_supabase_builds_expected_object_path(monkeypatch):
     assert public_url == "https://example.supabase.co/storage/v1/object/public/referral-cv/" + object_path.replace(" ", "%20")
     assert captured["url"].startswith("https://example.supabase.co/storage/v1/object/referral-cv/")
     assert captured["headers"]["Authorization"] == "Bearer service-role-key"
+
+
+def test_send_email_message_serializes_smtp_payload(monkeypatch):
+    captured = {}
+
+    class FakeSMTP:
+        def __init__(self, host, port, timeout=30):
+            captured["host"] = host
+            captured["port"] = port
+            captured["timeout"] = timeout
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def starttls(self):
+            captured["starttls"] = True
+
+        def login(self, username, password):
+            captured["login"] = (username, password)
+
+        def send_message(self, message):
+            captured["to"] = message["To"]
+            captured["from"] = message["From"]
+            captured["subject"] = message["Subject"]
+            captured["body"] = message.get_content()
+
+    monkeypatch.setenv("SMTP_HOST", "smtp.example.com")
+    monkeypatch.setenv("SMTP_PORT", "587")
+    monkeypatch.setenv("SMTP_USERNAME", "mailer@example.com")
+    monkeypatch.setenv("SMTP_PASSWORD", "secret")
+    monkeypatch.setenv("SMTP_FROM_EMAIL", "noreply@example.com")
+    monkeypatch.setenv("SMTP_FROM_NAME", "Referly")
+    monkeypatch.setenv("SMTP_USE_TLS", "true")
+    monkeypatch.setattr(referral_delivery.smtplib, "SMTP", FakeSMTP)
+
+    result = referral_delivery.send_email_message(
+        "referee@example.com",
+        subject="Referral untuk PT Contoh",
+        message="Halo",
+    )
+
+    assert captured["host"] == "smtp.example.com"
+    assert captured["port"] == 587
+    assert captured["starttls"] is True
+    assert captured["login"] == ("mailer@example.com", "secret")
+    assert captured["to"] == "referee@example.com"
+    assert captured["from"] == "Referly <noreply@example.com>"
+    assert captured["subject"] == "Referral untuk PT Contoh"
+    assert "Halo" in captured["body"]
+    assert result["channel"] == "email"
+
+
+def test_send_referral_message_falls_back_to_email_when_phone_is_empty(monkeypatch):
+    captured = {}
+
+    def fake_send_email_message(target_email, subject, message):
+        captured["channel"] = "email"
+        captured["target"] = target_email
+        captured["subject"] = subject
+        captured["message"] = message
+        return {"status": True}
+
+    def fake_send_fonnte_message(*args, **kwargs):
+        raise AssertionError("WhatsApp path should not be used when phone number is empty")
+
+    monkeypatch.setattr(referral_delivery, "send_email_message", fake_send_email_message)
+    monkeypatch.setattr(referral_delivery, "send_fonnte_message", fake_send_fonnte_message)
+
+    result = referral_delivery.send_referral_message(
+        referee_phone_number=None,
+        referee_email="ref@example.com",
+        subject="Referral untuk PT Contoh",
+        message="referral body",
+    )
+
+    assert captured["channel"] == "email"
+    assert captured["target"] == "ref@example.com"
+    assert captured["subject"] == "Referral untuk PT Contoh"
+    assert result["channel"] == "email"
+    assert result["target"] == "ref@example.com"

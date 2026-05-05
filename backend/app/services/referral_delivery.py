@@ -4,11 +4,14 @@ import json
 import mimetypes
 import os
 import re
+import smtplib
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from email.message import EmailMessage
+from email.utils import formataddr
 
 from fastapi import HTTPException, UploadFile
 from datetime import datetime
@@ -25,6 +28,17 @@ class SupabaseStorageConfig:
 class FonnteConfig:
     api_key: str
     sender: str | None
+
+
+@dataclass(frozen=True)
+class EmailConfig:
+    host: str
+    port: int
+    username: str | None
+    password: str | None
+    from_email: str
+    from_name: str | None
+    use_tls: bool
 
 
 _PHONE_KEEP_DIGITS = re.compile(r"\D+")
@@ -59,6 +73,38 @@ def get_fonnte_config() -> FonnteConfig:
         )
 
     return FonnteConfig(api_key=api_key, sender=sender)
+
+
+def get_email_config() -> EmailConfig:
+    host = _clean_env("SMTP_HOST")
+    from_email = _clean_env("SMTP_FROM_EMAIL")
+
+    if not host or not from_email:
+        raise HTTPException(
+            status_code=503,
+            detail="Fallback email belum dikonfigurasi. Set SMTP_HOST dan SMTP_FROM_EMAIL.",
+        )
+
+    port_raw = _clean_env("SMTP_PORT", "587")
+    try:
+        port = int(port_raw)
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail="SMTP_PORT harus berupa angka.") from exc
+
+    username = _clean_env("SMTP_USERNAME") or None
+    password = _clean_env("SMTP_PASSWORD") or None
+    from_name = _clean_env("SMTP_FROM_NAME") or None
+    use_tls = _clean_env("SMTP_USE_TLS", "true").lower() not in {"0", "false", "no"}
+
+    return EmailConfig(
+        host=host,
+        port=port,
+        username=username,
+        password=password,
+        from_email=from_email,
+        from_name=from_name,
+        use_tls=use_tls,
+    )
 
 
 def normalize_phone_number(phone_number: str) -> str:
@@ -230,3 +276,60 @@ def send_fonnte_message(target_phone_number: str, message: str) -> dict[str, Any
             status_code=502,
             detail=f"Gagal mengirim pesan Fonnte: {exc}",
         ) from exc
+
+
+def send_email_message(target_email: str, subject: str, message: str) -> dict[str, Any]:
+    config = get_email_config()
+
+    email_message = EmailMessage()
+    email_message["To"] = target_email
+    email_message["From"] = formataddr((config.from_name, config.from_email)) if config.from_name else config.from_email
+    email_message["Subject"] = subject
+    email_message.set_content(message)
+
+    try:
+        with smtplib.SMTP(config.host, config.port, timeout=30) as client:
+            if config.use_tls:
+                client.starttls()
+            if config.username and config.password:
+                client.login(config.username, config.password)
+            client.send_message(email_message)
+    except Exception as exc:  # pragma: no cover - surfaced as HTTP error for the caller
+        raise HTTPException(
+            status_code=502,
+            detail=f"Gagal mengirim email referral: {exc}",
+        ) from exc
+
+    return {
+        "status": True,
+        "target": target_email,
+        "subject": subject,
+        "channel": "email",
+    }
+
+
+def send_referral_message(
+    *,
+    referee_phone_number: str | None,
+    referee_email: str | None,
+    subject: str,
+    message: str,
+) -> dict[str, Any]:
+    normalized_phone = normalize_phone_number(referee_phone_number or "")
+    normalized_email = (referee_email or "").strip()
+
+    if normalized_phone:
+        return {
+            "channel": "whatsapp",
+            "target": normalized_phone,
+            "response": send_fonnte_message(normalized_phone, message),
+        }
+
+    if normalized_email:
+        return {
+            "channel": "email",
+            "target": normalized_email,
+            "response": send_email_message(normalized_email, subject=subject, message=message),
+        }
+
+    raise HTTPException(status_code=400, detail="Referee phone number and email are not available")

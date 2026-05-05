@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import { ArrowLeft, AlertCircle, Briefcase, Building2, ExternalLink, Loader2, MapPin, Send, Users } from 'lucide-react'
+import { ArrowLeft, AlertCircle, Building2, Loader2, MapPin, Send, Users } from 'lucide-react'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import ReferralRequestModal from '../components/ReferralRequestModal'
@@ -98,7 +98,6 @@ export default function ConnectionPage() {
         console.log('Company name from connection:', resolvedConnection.company_name)
 
         let companyData = null
-        let vacancyData = { vacancies: [] }
 
         // Try to load company if company_id is available
         if (resolvedConnection.company_id) {
@@ -108,16 +107,18 @@ export default function ConnectionPage() {
               me?.id ? api.getRecommendationVacanciesFromTarget(me.id, resolvedConnection.user.id) : Promise.resolve({ vacancies: [] }),
             ])
             companyData = cData
-            vacancyData = vData
+            setVacancies(vData?.vacancies || [])
             console.log('Loaded company:', cData)
           } catch (companyErr) {
             console.error('Failed to load company by ID:', companyErr)
+            setVacancies([])
             // Fallback: try to search by company name if available
             if (resolvedConnection.company_name) {
               try {
                 const searchResults = await api.searchCompanies(resolvedConnection.company_name, 1)
-                if (searchResults && searchResults.length > 0) {
-                  companyData = searchResults[0]
+                const companies = searchResults?.companies || []
+                if (companies.length > 0) {
+                  companyData = companies[0]
                   console.log('Loaded company by name search:', companyData)
                 }
               } catch (searchErr) {
@@ -127,9 +128,21 @@ export default function ConnectionPage() {
           }
         }
 
+        // Final fallback: build minimal company object from connection payload
+        if (!companyData && (resolvedConnection.company_id || resolvedConnection.company_name)) {
+          companyData = {
+            id: resolvedConnection.company_id || '',
+            name: resolvedConnection.company_name || 'Unknown company',
+            industry: resolvedConnection.company_industry || null,
+          }
+        }
+
+        if (!resolvedConnection.company_id) {
+          setVacancies([])
+        }
+
         if (cancelled) return
         setCompany(companyData)
-        setVacancies(vacancyData.vacancies || [])
       } catch (err) {
         if (!cancelled) {
           console.error('Error loading connection:', err)
@@ -214,8 +227,16 @@ export default function ConnectionPage() {
 
   const companyName = company?.name || connection?.company_name || 'Unknown company'
   const jobTitle = connection?.job_title || 'Connection'
-  const recommendationScore = location.state?.recommendation?.score
   const isOpenToRefer = connection?.is_open_to_refer !== false
+  const referralCompany = company || (
+    (connection?.company_id || connection?.company_name)
+      ? {
+          id: connection?.company_id || '',
+          name: connection?.company_name || 'Unknown company',
+          industry: connection?.company_industry || null,
+        }
+      : null
+  )
 
   const aboutText = useMemo(() => {
     const chunks = []
@@ -293,7 +314,7 @@ export default function ConnectionPage() {
                   <button
                     type="button"
                     onClick={() => setReferralOpen(true)}
-                    disabled={!company}
+                    disabled={!referralCompany || !isOpenToRefer}
                     className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Send size={16} /> Request Referral
@@ -330,9 +351,9 @@ export default function ConnectionPage() {
                   {addingConnection ? 'Requesting...' : 'Request Connection'}
                 </button>
               )}
-              {company && (
+              {referralCompany?.id && (
                 <Link
-                  to={`/company/${company.id}`}
+                  to={`/company/${referralCompany.id}`}
                   className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   <Building2 size={16} /> View Company
@@ -419,7 +440,7 @@ export default function ConnectionPage() {
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
                       >
-                        <ExternalLink size={14} /> Source
+                        <Send size={14} /> Source
                       </a>
                     )}
                     {isConnected && (
@@ -428,23 +449,12 @@ export default function ConnectionPage() {
                         onClick={() => setReferralOpen(true)}
                         className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
                       >
-                        <Briefcase size={14} /> Request Referral
+                        <Send size={14} /> Request Referral
                       </button>
                     )}
                   </div>
                 </div>
               ))}
-
-              {company && (
-                <div className="pt-3">
-                  <Link
-                    to={`/company/${company.id}`}
-                    className="inline-flex items-center gap-1 text-sm font-semibold text-cyan-700 hover:underline"
-                  >
-                    View all openings at {company.name} <ArrowLeft size={14} className="rotate-180" />
-                  </Link>
-                </div>
-              )}
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
@@ -456,7 +466,7 @@ export default function ConnectionPage() {
 
       <ReferralRequestModal
         open={referralOpen}
-        company={company}
+        company={referralCompany}
         connection={connection}
         onClose={() => setReferralOpen(false)}
         onSuccess={() => {

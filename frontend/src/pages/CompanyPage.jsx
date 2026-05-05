@@ -10,6 +10,8 @@ export default function CompanyPage() {
   const { id } = useParams()
   const [company, setCompany] = useState(null)
   const [connections, setConnections] = useState([])
+  const [directRecommendationConnections, setDirectRecommendationConnections] = useState([])
+  const [suggestedRecommendationConnections, setSuggestedRecommendationConnections] = useState([])
   const [directRecommendationScores, setDirectRecommendationScores] = useState({})
   const [suggestedRecommendationScores, setSuggestedRecommendationScores] = useState({})
   const [loading, setLoading] = useState(true)
@@ -54,20 +56,28 @@ export default function CompanyPage() {
         if (cancelled) return
 
         const directScores = {}
+        const directConnections = []
         ;(directData.connections || []).forEach((item) => {
           directScores[item.user_id] = item.score
+          directConnections.push(normalizeRecommendedConnection(item, 1))
         })
 
         const suggestedScores = {}
+        const suggestedConnections = []
         ;(suggestedData.connections || []).forEach((item) => {
           suggestedScores[item.user_id] = item.score
+          suggestedConnections.push(normalizeRecommendedConnection(item, 2))
         })
 
+        setDirectRecommendationConnections(directConnections)
+        setSuggestedRecommendationConnections(suggestedConnections)
         setDirectRecommendationScores(directScores)
         setSuggestedRecommendationScores(suggestedScores)
       })
       .catch(() => {
         if (!cancelled) {
+          setDirectRecommendationConnections([])
+          setSuggestedRecommendationConnections([])
           setDirectRecommendationScores({})
           setSuggestedRecommendationScores({})
         }
@@ -75,6 +85,13 @@ export default function CompanyPage() {
 
     return () => { cancelled = true }
   }, [user?.id, id])
+
+  const visibleConnections = useMemo(() => {
+    return mergeConnections(
+      connections,
+      [...directRecommendationConnections, ...suggestedRecommendationConnections],
+    )
+  }, [connections, directRecommendationConnections, suggestedRecommendationConnections])
 
   if (loading) {
     return (
@@ -100,8 +117,8 @@ export default function CompanyPage() {
   if (!company) return null
 
   // Split connections by hop distance for better display
-  const directConnections = connections.filter(c => c.hops === 1)
-  const secondDegreeConnections = connections.filter(c => c.hops === 2)
+  const directConnections = visibleConnections.filter(c => c.hops === 1)
+  const secondDegreeConnections = visibleConnections.filter(c => c.hops === 2)
 
   return (
     <div className="space-y-6">
@@ -129,7 +146,7 @@ export default function CompanyPage() {
       </div>
 
       {/* Connections */}
-      {connections.length === 0 ? (
+      {visibleConnections.length === 0 ? (
         <EmptyConnections />
       ) : (
         <>
@@ -172,7 +189,9 @@ export default function CompanyPage() {
 
 function ConnectionList({ title, subtitle, connections, scoreMap, companyId, companyName, onRequestReferral }) {
   const rankedConnections = useMemo(() => {
-    return [...connections].sort((a, b) => (scoreMap?.[b.user.id] ?? 0) - (scoreMap?.[a.user.id] ?? 0))
+    return [...connections].sort(
+      (a, b) => (scoreMap?.[b.user.id] ?? 0) - (scoreMap?.[a.user.id] ?? 0),
+    )
   }, [connections, scoreMap])
 
   return (
@@ -247,6 +266,41 @@ function ConnectionItem({ conn, recommendationScore, companyId, companyName, onR
       </div>
     </li>
   )
+}
+
+function getConnectionUserId(conn) {
+  return conn?.user?.id ?? conn?.user_id ?? ''
+}
+
+function normalizeRecommendedConnection(item, hops) {
+  return {
+    user: {
+      id: item.user_id,
+      full_name: item.full_name || 'Unknown User',
+    },
+    job_title: item.job_title,
+    hops,
+    path_via: [],
+    is_open_to_refer: true,
+    company_name: item.company_name,
+    company_id: item.company_id,
+  }
+}
+
+function mergeConnections(baseConnections, fallbackConnections) {
+  const merged = new Map()
+
+  baseConnections.forEach((conn) => {
+    const userId = getConnectionUserId(conn)
+    if (userId) merged.set(userId, conn)
+  })
+
+  fallbackConnections.forEach((conn) => {
+    const userId = getConnectionUserId(conn)
+    if (userId && !merged.has(userId)) merged.set(userId, conn)
+  })
+
+  return Array.from(merged.values())
 }
 
 function EmptyConnections() {

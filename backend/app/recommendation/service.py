@@ -25,16 +25,26 @@ class RecommendationService:
     
     def get_suggested_connections(self, user_id):
         result = []
+        seen_user_ids = set()
         for item in self.user_repository.get_suggested_connections(user_id):
             # Handle both dict and tuple formats for backwards compatibility
             if isinstance(item, dict):
-                result.append(item)
+                suggestion = item
             else:
-                result.append({
+                suggestion = {
                     "user_id": item[0],
                     "score": item[1],
                     "friend_of_friend": item[2] if len(item) > 2 else False
-                })
+                }
+            
+            # Skip self and duplicates
+            suggested_user_id = suggestion["user_id"]
+            if suggested_user_id == user_id or suggested_user_id in seen_user_ids:
+                continue
+            
+            seen_user_ids.add(suggested_user_id)
+            result.append(suggestion)
+        
         result.sort(key=lambda x: (x.get("friend_of_friend", False), x["score"]), reverse=True)
 
         return result
@@ -68,12 +78,22 @@ class RecommendationService:
     
     def get_suggested_connections_from_specific_company(self, user_id, company_id):
         result = []
+        seen_user_ids = set()
         for item in self.user_repository.get_suggested_connections_for_specific_company(user_id, company_id):
             # Handle both dict and tuple formats for backwards compatibility
             if isinstance(item, dict):
-                result.append(item)
+                suggestion = item
             else:
-                result.append({"user_id": item[0], "score": item[1]})
+                suggestion = {"user_id": item[0], "score": item[1]}
+            
+            # Skip self and duplicates
+            suggested_user_id = suggestion["user_id"]
+            if suggested_user_id == user_id or suggested_user_id in seen_user_ids:
+                continue
+            
+            seen_user_ids.add(suggested_user_id)
+            result.append(suggestion)
+        
         result.sort(key=lambda x: x["score"], reverse=True)
 
         return result

@@ -156,7 +156,7 @@ export function AuthProvider({ children }) {
     return { needsEmailConfirmation: false }
   }, [login, syncAndFetchUser])
 
-  const loginWithProvider = useCallback(async (provider) => {
+  const loginWithProvider = useCallback(async (provider, redirectTo = '/login') => {
     if (!hasSupabaseConfig || !supabase) {
       throw new Error('Supabase OAuth is not configured')
     }
@@ -164,7 +164,7 @@ export function AuthProvider({ children }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/login`,
+        redirectTo: `${window.location.origin}${redirectTo}`,
       },
     })
 

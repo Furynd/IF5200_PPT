@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState, useRef } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff, Search, ChevronRight, Briefcase, Upload, FileText, X } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { api } from '../lib/api'
@@ -43,16 +43,25 @@ export default function RegisterPage() {
   const [form, setForm] = useState({ full_name: '', email: '', password: '', phone_number: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [cv, setCv] = useState(null)
+  const [oauthPhoneNumber, setOauthPhoneNumber] = useState('')
   const [employmentStatus, setEmploymentStatus] = useState('')
   const [selectedCompany, setSelectedCompany] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState('')
-  const { register, loginWithProvider, setUser } = useAuth()
+  const { user, loading: authLoading, register, loginWithProvider, setUser } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const fileInputRef = useRef(null)
+  const oauthUploadRef = useRef(null)
+  const isOAuthReturn = new URLSearchParams(location.search).get('oauth') === '1'
 
   const update = (field) => (e) => setForm({ ...form, [field]: e.target.value })
+
+  useEffect(() => {
+    if (!isOAuthReturn || !user || oauthPhoneNumber) return
+    setOauthPhoneNumber(user.phone_number || '')
+  }, [isOAuthReturn, oauthPhoneNumber, user])
 
   /* ── Handlers ─────────────────────────────────────────────────────── */
 
@@ -137,7 +146,7 @@ export default function RegisterPage() {
     setError('')
     setOauthLoading(provider)
     try {
-      await loginWithProvider(provider)
+      await loginWithProvider(provider, '/register?oauth=1')
     } catch (err) {
       setError(err.message || 'OAuth sign in failed')
       setOauthLoading('')
@@ -147,6 +156,162 @@ export default function RegisterPage() {
   const handleStep4Submit = () => {
     if (!selectedCompany) { setError('Please search and select your company'); return }
     handleFinalSubmit(selectedCompany.id)
+  }
+
+  const handleOAuthContinueSubmit = async () => {
+    if (!user) {
+      setError('Please complete sign in first')
+      return
+    }
+
+    if (!oauthPhoneNumber.trim()) {
+      setError('Please enter your phone number')
+      return
+    }
+
+    if (!cv) {
+      setError('Please upload your CV before continuing')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    try {
+      await api.updateProfile({ phone_number: normalizePhone(oauthPhoneNumber) })
+      const uploadedCv = await api.uploadCV(cv)
+      const profile = await api.getProfile()
+      setUser({
+        ...profile,
+        cv_filename: uploadedCv?.filename ?? profile?.cv_filename ?? null,
+        cv_url: uploadedCv?.url ?? profile?.cv_url ?? null,
+      })
+
+      api.extractSkillsFromPDF(cv).catch(() => {})
+
+      navigate('/profile?welcome=1', { replace: true })
+    } catch (err) {
+      setError(err.message || 'Could not complete your profile. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (isOAuthReturn) {
+    if (authLoading) {
+      return (
+        <div className="min-h-screen flex flex-col bg-gray-100">
+          <PublicNavbar />
+          <div className="flex-1 flex items-center justify-center px-4 py-12">
+            <div className="w-full max-w-lg bg-white rounded-2xl border border-gray-200 p-8 text-center">
+              <h1 className="text-2xl font-bold text-slate-900">Finishing sign in...</h1>
+              <p className="text-sm text-gray-500 mt-2">We are restoring your account so you can finish onboarding.</p>
+            </div>
+          </div>
+          <PublicFooter />
+        </div>
+      )
+    }
+
+    if (user) {
+      return (
+        <div className="min-h-screen flex flex-col bg-gray-100">
+          <PublicNavbar />
+          <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+            <div className="w-full max-w-lg">
+              <div className="mb-6">
+                <span className="inline-block text-xs font-semibold text-slate-600 bg-gray-200 px-3 py-1 rounded-full uppercase tracking-widest">
+                  Continue registration
+                </span>
+                <h1 className="text-3xl font-bold text-slate-900 mt-3">Complete your profile</h1>
+                <p className="text-gray-500 mt-2">
+                  You are signed in as {user.email}. Add your phone number and CV to finish the registration flow.
+                </p>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-gray-200 p-8 space-y-6">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Phone Number</label>
+                  <input
+                    type="tel"
+                    value={oauthPhoneNumber}
+                    onChange={(e) => setOauthPhoneNumber(e.target.value)}
+                    required
+                    placeholder="08123456789"
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">Upload CV</label>
+                  <input
+                    ref={oauthUploadRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    onChange={handleCvChange}
+                    className="hidden"
+                  />
+
+                  {cv ? (
+                    <div className="space-y-5">
+                      <div className="flex items-center gap-4 p-5 bg-emerald-50 border border-emerald-200 rounded-xl">
+                        <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                          <FileText size={22} className="text-emerald-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-emerald-800 truncate">{cv.name}</p>
+                          <p className="text-xs text-emerald-600 mt-0.5">{(cv.size / (1024 * 1024)).toFixed(1)} MB · Ready to upload</p>
+                        </div>
+                        <button
+                          onClick={() => { setCv(null); oauthUploadRef.current.value = '' }}
+                          className="p-1.5 text-emerald-500 hover:text-red-500 transition-colors flex-shrink-0"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => oauthUploadRef.current.click()}
+                        className="w-full py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+                      >
+                        Replace file
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => oauthUploadRef.current.click()}
+                      className="w-full border-2 border-dashed border-gray-300 rounded-xl p-10 flex flex-col items-center gap-4 hover:border-slate-400 hover:bg-gray-50 transition-colors group"
+                    >
+                      <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                        <Upload size={24} className="text-blue-500" />
+                      </div>
+                      <div className="text-center">
+                        <p className="font-semibold text-slate-700">Click to upload your CV</p>
+                        <p className="text-sm text-gray-400 mt-1">PDF, DOC, DOCX — max 5 MB</p>
+                      </div>
+                      <div className="px-5 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg group-hover:bg-slate-800 transition-colors">
+                        Browse Files
+                      </div>
+                    </button>
+                  )}
+                </div>
+
+                {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">{error}</div>}
+
+                <button
+                  onClick={handleOAuthContinueSubmit}
+                  disabled={loading}
+                  className="w-full py-2.5 bg-slate-900 text-white rounded-lg font-semibold hover:bg-slate-800 disabled:opacity-50 transition-colors"
+                >
+                  {loading ? 'Saving...' : 'Continue'}
+                </button>
+              </div>
+            </div>
+          </div>
+          <PublicFooter />
+        </div>
+      )
+    }
   }
 
   /* ── Step 1: Create Account ─────────────────────────────────────────── */

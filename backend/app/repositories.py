@@ -150,7 +150,11 @@ class FangCollaborativeParameterRepository:
             new_value, _ = self._create_new_user_parameters(user_id)
             return new_value
         
-        return np.array(record["latent_vector"].to_native())
+        latent_vector = record["latent_vector"]
+        if isinstance(latent_vector, list):
+            return np.array(latent_vector)
+        else:
+            return np.array(latent_vector.to_native())
     
     def get_user_bias(self, user_id) -> float:
         record = self._get_config_node()
@@ -212,7 +216,11 @@ class FangCollaborativeParameterRepository:
             new_value, _ = self._create_new_skill_parameters(skill_id)
             return new_value
         
-        return np.array(record["latent_vector"].to_native())
+        latent_vector = record["latent_vector"]
+        if isinstance(latent_vector, list):
+            return np.array(latent_vector)
+        else:
+            return np.array(latent_vector.to_native())
     
     def get_skill_bias(self, skill_id) -> float:
         record = self._get_config_node()
@@ -466,7 +474,6 @@ class UserRepository:
                     -[:OPENS]->(v:Vacancy)
                     -[e:SUGGESTED_TO]->(n:User {id: $id})
                 WHERE n <> n2
-                AND n.id <> $id
                 AND NOT (n)-[:CONNECTED_TO]-(n2)
                 AND NOT (n)-[:CONNECTED_TO]-()-[:CONNECTED_TO]-(n2)
                 RETURN n2.id AS id, MAX(e.score) AS score;

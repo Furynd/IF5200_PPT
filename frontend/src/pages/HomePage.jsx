@@ -104,9 +104,9 @@ function RecommendationCard({ item }) {
             {connection?.job_title || 'Recommended connection'}
           </p>
         </div>
-        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+        {/* <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
           {typeof score === 'number' ? score.toFixed(2) : 'N/A'}
-        </span>
+        </span> */}
       </div>
       {connection?.company_name && (
         <p className="mt-3 text-xs text-gray-500 truncate">

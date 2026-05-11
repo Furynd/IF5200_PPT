@@ -147,11 +147,20 @@ function AddConnectionModal({ open, onClose, directRecommendations, suggestedRec
                 {suggestedRecommendations.length} hasil
               </span>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {suggestedRecommendations.map((item) => (
-                <RecommendationCard key={item.user_id} item={item} />
-              ))}
-            </div>
+            {suggestedRecommendations.length === 0 ? (
+              <div className="py-8 text-center">
+                <p className="font-semibold text-slate-700">Belum ada rekomendasi</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Lengkapi profil dan sinkronkan kontak untuk menemukan koneksi yang relevan.
+                </p>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {suggestedRecommendations.map((item) => (
+                  <RecommendationCard key={item.user_id} item={item} />
+                ))}
+              </div>
+            )}
           </section>
 
           {/* <section className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">

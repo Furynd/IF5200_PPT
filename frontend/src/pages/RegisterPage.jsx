@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff, Search, ChevronRight, Briefcase, Upload, FileText, X } from 'lucide-react'
 import { useAuth } from '../lib/auth'
@@ -62,6 +62,15 @@ export default function RegisterPage() {
     if (!isOAuthReturn || !user || oauthPhoneNumber) return
     setOauthPhoneNumber(user.phone_number || '')
   }, [isOAuthReturn, oauthPhoneNumber, user])
+
+  // If the user closes the OAuth popup/tab without completing, the promise may
+  // never settle and oauthLoading freezes. Reset it when the window regains focus.
+  useEffect(() => {
+    if (!oauthLoading) return
+    const handleFocus = () => setTimeout(() => setOauthLoading(''), 1500)
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [oauthLoading])
 
   /* ── Handlers ─────────────────────────────────────────────────────── */
 

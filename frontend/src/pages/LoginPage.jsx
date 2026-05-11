@@ -24,6 +24,15 @@ export default function LoginPage() {
     }
   }, [authLoading, user, navigate, from])
 
+  // If the user closes the OAuth popup/tab without completing, the promise may
+  // never settle and oauthLoading freezes. Reset it when the window regains focus.
+  useEffect(() => {
+    if (!oauthLoading) return
+    const handleFocus = () => setTimeout(() => setOauthLoading(''), 1500)
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [oauthLoading])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')

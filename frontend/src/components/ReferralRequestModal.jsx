@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Loader2, Send } from 'lucide-react'
 import { api } from '../lib/api'
 
@@ -6,7 +6,14 @@ export default function ReferralRequestModal({ open, company, connection, onClos
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [cooldown, setCooldown] = useState(0)
   const isOpenToRefer = connection?.is_open_to_refer !== false
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const id = setTimeout(() => setCooldown(c => c - 1), 1000)
+    return () => clearTimeout(id)
+  }, [cooldown])
 
   if (!open || !company || !connection) return null
 
@@ -14,6 +21,7 @@ export default function ReferralRequestModal({ open, company, connection, onClos
     setMessage('')
     setLoading(false)
     setError('')
+    setCooldown(0)
   }
 
   const handleClose = () => {
@@ -38,6 +46,7 @@ export default function ReferralRequestModal({ open, company, connection, onClos
       onClose()
     } catch (err) {
       setError(err.message || 'Gagal mengirim referral.')
+      setCooldown(10)
     } finally {
       setLoading(false)
     }
@@ -97,11 +106,11 @@ export default function ReferralRequestModal({ open, company, connection, onClos
             </button>
             <button
               type="submit"
-              disabled={loading || !isOpenToRefer}
+              disabled={loading || cooldown > 0 || !isOpenToRefer}
               className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-              {loading ? 'Mengirim...' : 'Kirim Referral'}
+              {loading ? 'Mengirim...' : cooldown > 0 ? `Tunggu ${cooldown}s` : 'Kirim Referral'}
             </button>
           </div>
         </form>

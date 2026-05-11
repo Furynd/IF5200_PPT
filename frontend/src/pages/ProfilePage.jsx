@@ -56,6 +56,7 @@ export default function ProfilePage() {
       const updated = await api.updateProfile({
         company_id: selectedCompany?.id || null,
         job_title: jobTitle.trim() || null,
+        short_bio: shortBio.trim() || null,
       })
       setUser(updated)
       setEditing(false)

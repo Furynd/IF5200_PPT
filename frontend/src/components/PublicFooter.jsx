@@ -24,13 +24,6 @@ export default function PublicFooter() {
               <a href="#" className="block text-gray-500 hover:text-slate-900 transition-colors">Contact</a>
             </div>
           </div>
-          <div>
-            <p className="font-semibold text-slate-700 mb-2">Social</p>
-            <div className="space-y-1.5">
-              <a href="#" className="block text-gray-500 hover:text-slate-900 transition-colors">LinkedIn</a>
-              <a href="#" className="block text-gray-500 hover:text-slate-900 transition-colors">Twitter</a>
-            </div>
-          </div>
         </div>
       </div>
     </footer>

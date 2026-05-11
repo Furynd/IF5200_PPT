@@ -4,7 +4,6 @@ import { Upload, FileText, X, Pencil, Share2, Eye, Trash2, Check } from 'lucide-
 import { useAuth } from '../lib/auth'
 import { api } from '../lib/api'
 import CompanyCombobox from '../components/CompanyCombobox'
-import ContactSyncModal from '../components/ContactSyncModal'
 
 export default function ProfilePage() {
   const { user, setUser } = useAuth()
@@ -17,7 +16,6 @@ export default function ProfilePage() {
   const [shortBio, setShortBio] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [syncModalOpen, setSyncModalOpen] = useState(false)
 
   const [cv, setCv] = useState(null)
   const [recentUploads, setRecentUploads] = useState([])
@@ -121,13 +119,8 @@ export default function ProfilePage() {
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="w-20 h-20 rounded-full bg-slate-900 text-white flex items-center justify-center text-2xl font-bold">
-                {initials}
-              </div>
-              <button className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-sm hover:bg-gray-50">
-                <Pencil size={12} className="text-gray-600" />
-              </button>
+            <div className="w-20 h-20 rounded-full bg-slate-900 text-white flex items-center justify-center text-2xl font-bold">
+              {initials}
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900">{user.full_name}</h1>
@@ -135,7 +128,7 @@ export default function ProfilePage() {
             </div>
           </div>
           <button
-            onClick={() => setSyncModalOpen(true)}
+            onClick={() => { navigator.clipboard.writeText(window.location.href) }}
             className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-gray-50 transition-colors"
           >
             <Share2 size={15} />
@@ -295,11 +288,6 @@ export default function ProfilePage() {
         )}
       </div>
 
-      <ContactSyncModal
-        open={syncModalOpen}
-        onClose={() => setSyncModalOpen(false)}
-        onSuccess={() => setSyncModalOpen(false)}
-      />
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { Network, Settings, HelpCircle, LogOut } from 'lucide-react'
+import { Network, Settings, LogOut } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 
 export default function Layout() {
@@ -62,10 +62,6 @@ export default function Layout() {
             Settings
           </NavLink>
 
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-            <HelpCircle size={16} />
-            Help
-          </button>
         </nav>
 
         {/* Logout at bottom */}

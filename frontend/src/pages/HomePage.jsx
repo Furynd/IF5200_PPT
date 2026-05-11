@@ -104,9 +104,9 @@ function RecommendationCard({ item }) {
             {connection?.job_title || 'Recommended connection'}
           </p>
         </div>
-        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+        {/* <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
           {typeof score === 'number' ? score.toFixed(2) : 'N/A'}
-        </span>
+        </span> */}
       </div>
       {connection?.company_name && (
         <p className="mt-3 text-xs text-gray-500 truncate">
@@ -369,7 +369,7 @@ export default function HomePage() {
           </p>
           <p className="text-sm text-gray-500 mt-1">
             {connections.length === 0
-              ? 'Add your first connection by syncing your contacts.'
+              ? 'Add your first connection to get started.'
               : 'Try a different search term or filter.'}
           </p>
           {connections.length === 0 && (
@@ -377,7 +377,7 @@ export default function HomePage() {
               onClick={() => setSyncOpen(true)}
               className="mt-4 px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors"
             >
-              Sync Contacts
+              Add Connection
             </button>
           )}
         </div>

@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://if5200ppt-staging.up.railway.app/api/$1"
+      "destination": "https://if5200ppt-production.up.railway.app/api/$1"
     },
     {
       "source": "/(.*)",
